@@ -1,0 +1,35 @@
+// vim: et ts=2 sw=2
+// Bug with reporting one of those "self" as unused.
+use ast::*;
+grammar;
+
+pub Natural = r"[0-9]+";
+pub Ident = r"[a-zA-Z][a-zA-Z0-9_/-]*";
+
+Box<T>: Box<T> = T => Box::new(<>);
+Paren<T>: T = "(" <T> ")";
+Brace<T>: T = "{" <T> "}";
+Brack<T>: T = "[" <T> "]";
+Angle<T>: T = "<" <T> ">";
+
+List1<S, T>: Deq<T> = {
+  <mut l: List1<S, T>> S <el: T>              => { l.push_back(el); l },
+  <el: T>                                     => { let mut d = Deq::new(); d.push_back(el); d },
+};
+
+pub Path: Path<'input> = List1<".", Ident>;
+
+pub Expr: Expr<'input> = {
+  Term1                                       => Expr::Term1(<>),
+};
+
+pub Term1: Term1<'input> = {
+  Term                                        => Term1::Term(<>),
+  <Box<Term1>> "with" <Path> "=" <Term>       => Term1::With(<>),
+  <Box<Term1>> <Term>                         => Term1::Substitution(<>),
+};
+
+pub Term: Term<'input> = {
+  Natural                                     => Term::Natural(<>),
+  Path                                        => Term::Path(<>),
+};

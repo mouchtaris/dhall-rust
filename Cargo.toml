@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    'm/ast',
+    'm/cli',
+    'm/lex',
+    'm/parse',
+]
+[patch.crates-io.ast]
+path = 'm/ast'
+
+[patch.crates-io.cli]
+path = 'm/cli'
+
+[patch.crates-io.lex]
+path = 'm/lex'
+
+[patch.crates-io.parse]
+path = 'm/parse'

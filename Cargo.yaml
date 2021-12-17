@@ -1,0 +1,33 @@
+config:
+  module_dir: m
+  version: "0.0.1"
+module:
+  cli:
+    dep_mod:
+      - parse
+    dep_crate:
+      - log
+      - thiserror
+      - pretty_env_logger
+  parse:
+    dep_mod:
+      - lex
+      - ast
+    dep_crate:
+      - log
+      - thiserror
+      - lalrpop-util
+  lex:
+    dep_mod: []
+    dep_crate:
+      - log
+      - thiserror
+  ast:
+    dep_mod: []
+    dep_crate: []
+crate:
+  lalrpop-util: "0.19.6"
+  regex: "1"
+  log: ">= 0.4.14"
+  pretty_env_logger: ">= 0.4.0"
+  thiserror: ">= 1.0.30"
