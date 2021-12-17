@@ -72,6 +72,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "cli"
 version = "0.0.1"
 dependencies = [
+ "lex",
  "log",
  "parse",
  "pretty_env_logger",
@@ -250,6 +251,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 name = "lex"
 version = "0.0.1"
 dependencies = [
+ "ast",
  "log",
  "thiserror",
 ]

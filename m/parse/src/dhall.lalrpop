@@ -1,10 +1,10 @@
 // vim: et ts=2 sw=2
 // Bug with reporting one of those "self" as unused.
-use ast::*;
-grammar;
+use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt};
+use super::Error;
+grammar<'input>;
 
-pub Natural = r"[0-9]+";
-pub Ident = r"[a-zA-Z][a-zA-Z0-9_/-]*";
+pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\" };
 
 Box<T>: Box<T> = T => Box::new(<>);
 Paren<T>: T = "(" <T> ")";
@@ -13,23 +13,112 @@ Brack<T>: T = "[" <T> "]";
 Angle<T>: T = "<" <T> ">";
 
 List1<S, T>: Deq<T> = {
-  <mut l: List1<S, T>> S <el: T>              => { l.push_back(el); l },
-  <el: T>                                     => { let mut d = Deq::new(); d.push_back(el); d },
+  <mut l: List1<S, T>> S <el: T>                      => { l.push_back(el); l },
+  <el: T>                                             => { let mut d = Deq::new(); d.push_back(el); d },
 };
 
+List2<S, T>: Deq<T> = S? <List1<S, T>>;
+
+pub Val: Val<'input> = Box<Expr>;
 pub Path: Path<'input> = List1<".", Ident>;
 
 pub Expr: Expr<'input> = {
-  Term1                                       => Expr::Term1(<>),
+  Term2                                               => Expr::Term1(<>),
+  ExprLet,
+};
+
+pub ExprLet: Expr<'input> = {
+  <LetStmtList> "in" <Val>                            => Expr::Let(<>),
+};
+
+pub LetStmtList: Deq<LetStmt<'input>> = {
+  LetStmt => ast::deq(<>),
+  <mut l: LetStmtList> <s: LetStmt> => { l.push_back(s); l },
+};
+
+pub LetStmt =
+  "let" <Ident> <(":" <Val>)?> "=" <Val>
+;
+
+pub Term2: Term1<'input> = {
+  <Box<Term1>> "->" <Box<Term2>>                      => Term1::Arrow(<>),
+  Term1,
 };
 
 pub Term1: Term1<'input> = {
-  Term                                        => Term1::Term(<>),
-  <Box<Term1>> "with" <Path> "=" <Term>       => Term1::With(<>),
-  <Box<Term1>> <Term>                         => Term1::Substitution(<>),
+  Term                                                => Term1::Term(<>),
+  <Box<Term1>> "with" <Path> "=" <Term>               => Term1::With(<>),
+  <Box<Term1>> <Term>                                 => Term1::Evaluation(<>),
+  Box<Term1> Op Term                                  => Term1::Operation(<>),
 };
 
 pub Term: Term<'input> = {
-  Natural                                     => Term::Natural(<>),
-  Path                                        => Term::Path(<>),
+  Natural                                             => Term::Natural(<>),
+  Path                                                => Term::Path(<>),
+  "{" <List2<",", RecordField>> "}"                   => Term::Record(<>),
+  "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
+  "(" <Val> ")"                                       => Term::Expr(<>),
 };
+
+pub RecordField: (Path<'input>, Val<'input>) = {
+  Path                      => (<>.to_owned(), Box::new(ast::path_expr(<>))),
+  <Path> "=" <Val>          => (<>),
+};
+
+pub TypeRecordField: (Path<'input>, Val<'input>) = {
+  <Path> ":" <Val>          => (<>),
+};
+
+extern {
+  type Location = usize;
+  type Error = Error;
+  enum Token<'input> {
+    "⩓"       => Token::Conj1(<&'input str>),
+    "//\\\\"  => Token::Conj1(<&'input str>),
+    "∧"       => Token::Conj2(<&'input str>),
+    "/\\"     => Token::Conj2(<&'input str>),
+    "⫽"       => Token::Alt(<&'input str>),
+    "//"      => Token::Alt(<&'input str>),
+    "\\"      => Token::Lambda(<&'input str>),
+    "λ"       => Token::Lambda(<&'input str>),
+    "->"      => Token::Arrow(<&'input str>),
+    "→"       => Token::Arrow(<&'input str>),
+    "="       => Token::Equals(<&'input str>),
+    "let"     => Token::Let(<&'input str>),
+    "in"      => Token::In(<&'input str>),
+    "("       => Token::LPar(<&'input str>),
+    ")"       => Token::RPar(<&'input str>),
+    ":"       => Token::Colon(<&'input str>),
+    "forall"  => Token::Forall(<&'input str>),
+    "∀"       => Token::Forall(<&'input str>),
+    "++"      => Token::TextConcat(<&'input str>),
+    "#"       => Token::ListConcat(<&'input str>),
+    "+"       => Token::Plus(<&'input str>),
+    "/"       => Token::Div(<&'input str>),
+    "*"       => Token::Star(<&'input str>),
+    "-"       => Token::Minus(<&'input str>),
+    "{"       => Token::LBrace(<&'input str>),
+    "}"       => Token::RBrace(<&'input str>),
+    "["       => Token::LBracket(<&'input str>),
+    "]"       => Token::RBracket(<&'input str>),
+    "<"       => Token::LAngle(<&'input str>),
+    ">"       => Token::RAngle(<&'input str>),
+    ","       => Token::Comma(<&'input str>),
+    "."       => Token::Dot(<&'input str>),
+    "|"       => Token::Pipe(<&'input str>),
+    "\""      => Token::DQuote(<&'input str>),
+    "'"       => Token::SQuote(<&'input str>),
+    "?"       => Token::Questionmark(<&'input str>),
+    "if"      => Token::If(<&'input str>),
+    "then"    => Token::Then(<&'input str>),
+    "else"    => Token::Else(<&'input str>),
+    "${"      => Token::TextImbue(<&'input str>),
+    "with"    => Token::With(<&'input str>),
+    Text      => Token::Text(<&'input str>),
+    Natural   => Token::Natural(<&'input str>),
+    Ident     => Token::Ident(<&'input str>),
+    RelUri    => Token::RelUri(<&'input str>),
+    HttpsUri  => Token::HttpsUri(<&'input str>),
+    Sha256    => Token::Sha256(<&'input str>),
+  }
+}

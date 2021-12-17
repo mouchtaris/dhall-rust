@@ -2,6 +2,10 @@
 name = 'lex'
 version = '0.0.1'
 edition = '2018'
+[dependencies.ast]
+version = '0.0.1'
+path = '../ast'
+
 [dependencies.log]
 version = '>= 0.4.14'
 

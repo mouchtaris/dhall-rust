@@ -4,3 +4,6 @@ pub const VERSION: &str = "0.0.1";
 extern crate lalrpop_util;
 
 lalrpop_mod!(pub dhall);
+
+#[derive(Debug)]
+pub struct Error;

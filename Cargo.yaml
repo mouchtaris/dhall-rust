@@ -5,6 +5,7 @@ module:
   cli:
     dep_mod:
       - parse
+      - lex
     dep_crate:
       - log
       - thiserror
@@ -18,7 +19,8 @@ module:
       - thiserror
       - lalrpop-util
   lex:
-    dep_mod: []
+    dep_mod:
+      - ast
     dep_crate:
       - log
       - thiserror
