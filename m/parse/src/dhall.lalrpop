@@ -4,7 +4,7 @@ use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt};
 use super::Error;
 grammar<'input>;
 
-pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\" };
+pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\", ":" };
 
 Box<T>: Box<T> = T => Box::new(<>);
 Paren<T>: T = "(" <T> ")";
@@ -22,13 +22,14 @@ List2<S, T>: Deq<T> = S? <List1<S, T>>;
 pub Val: Val<'input> = Box<Expr>;
 pub Path: Path<'input> = List1<".", Ident>;
 
+λ = { "λ", "\\" }
+α = { "→", "->" }
+φ = { "∀", "forall" }
+
 pub Expr: Expr<'input> = {
   Term2                                               => Expr::Term1(<>),
-  ExprLet,
-};
-
-pub ExprLet: Expr<'input> = {
   <LetStmtList> "in" <Val>                            => Expr::Let(<>),
+  λ "(" <Ident> <(":" <Val>)?> ")" α <Val>            => Expr::Lambda(<>),
 };
 
 pub LetStmtList: Deq<LetStmt<'input>> = {
@@ -41,7 +42,8 @@ pub LetStmt =
 ;
 
 pub Term2: Term1<'input> = {
-  <Box<Term1>> "->" <Box<Term2>>                      => Term1::Arrow(<>),
+  <Box<Term1>> α <Box<Term2>>                         => Term1::Arrow(None, <>),
+  φ "(" <i: Ident> ":" <t: Box<Term1>> ")" α <v: Box<Term2>>    => Term1::Arrow(Some(i), t, v),
   Term1,
 };
 
@@ -58,6 +60,7 @@ pub Term: Term<'input> = {
   "{" <List2<",", RecordField>> "}"                   => Term::Record(<>),
   "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
   "(" <Val> ")"                                       => Term::Expr(<>),
+  Uri Guard?                                          => Term::Import(<>),
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
@@ -68,6 +71,10 @@ pub RecordField: (Path<'input>, Val<'input>) = {
 pub TypeRecordField: (Path<'input>, Val<'input>) = {
   <Path> ":" <Val>          => (<>),
 };
+
+pub Uri = { RelUri, HttpsUri };
+
+pub Guard = Sha256 ("?" <Uri>)?;
 
 extern {
   type Location = usize;

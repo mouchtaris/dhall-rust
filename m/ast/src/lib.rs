@@ -15,13 +15,14 @@ pub type LetStmt<'i> = (Ident<'i>, Option<Val<'i>>, Val<'i>);
 pub enum Expr<'i> {
     Term1(Term1<'i>),
     Let(Deq<LetStmt<'i>>, Val<'i>),
+    Lambda(Ident<'i>, Option<Val<'i>>, Val<'i>),
 }
 
 #[derive(Debug)]
 pub enum Term1<'i> {
     Term(Term<'i>),
     Evaluation(Box<Term1<'i>>, Term<'i>),
-    Arrow(Box<Term1<'i>>, Box<Term1<'i>>),
+    Arrow(Option<Ident<'i>>, Box<Term1<'i>>, Box<Term1<'i>>),
     With(Box<Term1<'i>>, Path<'i>, Term<'i>),
     Operation(Box<Term1<'i>>, &'i str, Term<'i>),
 }
@@ -33,6 +34,7 @@ pub enum Term<'i> {
     Record(Deq<(Path<'i>, Val<'i>)>),
     TypeRecord(Deq<(Path<'i>, Val<'i>)>),
     Expr(Val<'i>),
+    Import(&'i str, Option<(&'i str, Option<&'i str>)>),
 }
 
 #[derive(Debug, Clone, Copy)]

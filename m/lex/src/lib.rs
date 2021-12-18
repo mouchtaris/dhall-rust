@@ -33,6 +33,7 @@ impl<'s> Iterator for &'s mut Lex<'s> {
 
         let mut token = parse_whitespace(inp)
             .or_else(|| parse_line_comment(inp))
+            .or_else(|| parse_rel_uri(inp))
             .or_else(|| parse_punctuation(inp))
             .or_else(|| parse_natural(inp))
             .or_else(|| parse_ident_or_keyword(inp));
@@ -98,6 +99,18 @@ fn parse_line_comment(inp: &str) -> R<'_> {
 
 fn parse_natural(inp: &str) -> R<'_> {
     parse_range(inp, |s| Token::Natural(s), |(_, c)| c.is_ascii_digit())
+}
+
+fn parse_rel_uri(inp: &str) -> R<'_> {
+    parse_range(
+        inp,
+        |s| Token::RelUri(s),
+        |&(i, c)| {
+            (i == 0 && c == '.')
+                || (i == 1 && (c == '.' || c == '/'))
+                || (i >= 2 && !c.is_whitespace())
+        },
+    )
 }
 
 fn parse_ident_or_keyword(inp: &str) -> R<'_> {
@@ -174,21 +187,4 @@ fn parse_punctuation(inp: &str) -> R<'_> {
         .or_else(|| parse_verbatim(inp, "'", "", |s| SQuote(s)))
         .or_else(|| parse_verbatim(inp, "?", "", |s| Questionmark(s)))
         .map(|t| (0, t, t.as_str().as_bytes().len()))
-}
-
-#[test]
-fn is_it() {
-    let s = &["→", "⩓", "∧", "⫽"];
-    for s in s {
-        eprintln!(
-            "{} {:?} charcount {} lastcharidx {:?} bytelen {} bytecount {}",
-            s,
-            s,
-            s.chars().count(),
-            s.char_indices().last(),
-            s.as_bytes().len(),
-            s.bytes().count()
-        );
-    }
-    assert!(false);
 }
