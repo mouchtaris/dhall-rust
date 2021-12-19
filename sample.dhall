@@ -1,168 +1,57 @@
-let T = ./Policy.Type.dhall
+let l = ../lib/...
 
-let u/ = T.u/
+let x = l.x
 
-let to_json/ = T.to_json/
+let u/ = l.u/
 
-let json/ = to_json/.json/
+let xs/ron = l.xs/ron : x.Script → Text
 
-let Capability = T.Capability
+let dhalls = ../etc/dhalls.dhall
 
-let Path/unix = u/.text/concat_sep "/"
-
-let Capability/show =
-      λ(cap : Capability) →
-        merge
-          { create = "create"
-          , read = "read"
-          , update = "update"
-          , list = "list"
-          , delete = "delete"
-          , sudo = "sudo"
-          , deny = "deny"
-          }
-          cap
-
-let Capability/to_json = to_json/.string Capability Capability/show
-
-let Capabilities/to_json = to_json/.list Capability Capability/to_json
-
-let AllowedParamsList/to_json = to_json/.list Text json/.string
-
-let AllowedParams/to_json =
-      to_json/.map T.AllowedParams AllowedParamsList/to_json
-
-let to_json =
-      λ(entry : T.Entry) →
-        json/.object
-          ( toMap
-              { path =
-                  json/.object
-                    [ { mapKey = Path/unix entry.path
-                      , mapValue =
-                          json/.object
-                            ( toMap
-                                { capabilities =
-                                    Capabilities/to_json entry.capabilities
-                                , allowed_parameters =
-                                    AllowedParams/to_json
-                                      entry.allowed_parameters
-                                }
-                            )
+let bin/format-dhalls
+    : x.Script
+    = let script/
+          : Text → x.Script
+          = λ(path : Text) →
+              [ x.write_file
+                  [ "", "dev", "stderr" ]
+                  ( x.fat3
+                      ''
+                      🎐 :: Format ${path}
+                      ''
+                  )
+              , x.exec
+                  (   x.cmd::{
+                      , cmd = [ "dhall" ]
+                      , args = x.strlist [ "format", path, "--unicode" ]
                       }
-                    ]
-              }
-          )
+                    ⫽ x.out/display
+                  )
+              ]
 
-let to_hcl =
-      λ(entry : T.Entry) →
-        ''
-        path "${Path/unix entry.path}"
-        {
-          capabilities = ${json/.render
-                             (Capabilities/to_json entry.capabilities)}
-          allowed_parameters = ${json/.render
-                                   ( AllowedParams/to_json
-                                       entry.allowed_parameters
-                                   )}
-        }
-        ''
+      let scripts
+          : List x.Script
+          = u/.list/map Text x.Script script/ dhalls
 
-let param =
-    -- Name	Description
-    -- identity.entity.id	The entity's ID
-    -- identity.entity.name	The entity's name
-    -- identity.entity.metadata.<metadata key>	Metadata associated with the entity for the given key
-    -- identity.entity.aliases.<mount accessor>.id	Entity alias ID for the given mount
-    -- identity.entity.aliases.<mount accessor>.name	Entity alias name for the given mount
-    -- identity.entity.aliases.<mount accessor>.metadata.<metadata key>	Metadata associated with the alias for the given mount and metadata key
-    -- identity.groups.ids.<group id>.name	The group name for the given group ID
-    -- identity.groups.names.<group name>.id	The group ID for the given group name
-    -- identity.groups.ids.<group id>.metadata.<metadata key>	Metadata associated with the group for the given key
-    -- identity.groups.names.<group name>.metadata.<metadata key>
-      let Prefix
-          : Type
-          = Text → Text
+      let parallel_script
+          : x.Script
+          = l.parallel/
+              scripts
+              ( λ(args : List x.Expr) →
+                    x.cmd::{
+                    , cmd = [ "env" ]
+                    , args =
+                          x.strlist
+                            [ "RUST_LOG=info", "parallel", "-n1", "-j0", "-u" ]
+                        # args
+                    }
+                  ⫽ x.out/display
+              )
 
-      let _/new = λ(p : Text) → λ(s : Text) → p ++ s
+      in  parallel_script
 
-      let _/with = λ(p : Text) → _/new 
-      "${p}."
+let bin/format-dhalls/xs/ron
+    : Text
+    = xs/ron bin/format-dhalls
 
-      let _/plus = λ(a : Prefix) → λ(b : Prefix) → λ(s : Text) → a (b s)
-
-      let _/pw
-          : Text → Prefix → Prefix
-          = λ(b : Text) → λ(a : Prefix) → _/plus a (_/with b)
-
-      let _/identity = _/pw "identity"
-
-      let _/entity = _/pw "entity"
-
-      let _/metadata = _/pw "metadata"
-
-      let _/aliases = _/pw "aliases"
-
-      let _/groups = _/pw "groups"
-
-      let _/ids = _/pw "ids"
-
-      let _/names = _/pw "names"
-
-      let _/ = _/new ""
-
-      in  { identity =
-              let _/ = _/identity _/
-
-              in  { entity =
-                      let _/ = _/entity _/
-
-                      in  { id = _/ "id"
-                          , name = _/ "name"
-                          , metadata = _/metadata _/
-                          , aliases =
-                              let _/ = _/aliases _/
-
-                              in  λ(mount_accessor : Text) →
-                                    let _/ = _/pw mount_accessor _/
-
-                                    in  { id = _/ "id"
-                                        , name = _/ "name"
-                                        , metadata = _/metadata _/
-                                        }
-                          }
-                  , groups =
-                      let _/ = _/groups _/
-
-                      in  { ids =
-                              let _/ = _/ids _/
-
-                              in  λ(group_id : Text) →
-                                    let _/ = _/pw group_id _/
-
-                                    in  { name = _/ "name"
-                                        , metadata = _/metadata _/
-                                        }
-                          , names =
-                              let _/ = _/names _/
-
-                              in  λ(group_name : Text) →
-                                    let _/ = _/pw group_name _/
-
-                                    in  { id = _/ "id"
-                                        , metadata = _/metadata _/
-                                        }
-                          }
-                  }
-          }
-
-in    { param
-      , to_json
-      , to_hcl
-      , Capability/show
-      , AllowedParams/to_json
-      , AllowedParamsList/to_json
-      , Capabilities/to_json
-      , Capability/to_json
-      }
-    : T.Type
+in  { bin/format-dhalls, bin/format-dhalls/xs/ron }
