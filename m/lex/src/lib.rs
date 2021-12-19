@@ -179,7 +179,7 @@ fn parse_rel_uri(inp: &str) -> R<'_> {
         |&(i, c)| {
             (i == 0 && c == '.')
                 || (i == 1 && (c == '.' || c == '/'))
-                || (i >= 2 && !c.is_whitespace() && c != ')')
+                || (i >= 2 && !c.is_whitespace() && c != ')' && c != ',')
         },
     )
     .and_then(longer_than(2))
