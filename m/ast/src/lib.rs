@@ -28,6 +28,8 @@ pub enum Term1<'i> {
     Arrow(Option<Ident<'i>>, Box<Term1<'i>>, Box<Term1<'i>>),
     With(Box<Term1<'i>>, Path<'i>, Term<'i>),
     Operation(Box<Term1<'i>>, &'i str, Term<'i>),
+    IfThenElse(Val<'i>, Val<'i>, Val<'i>),
+    Ascribe(Box<Term1<'i>>, Val<'i>),
 }
 
 #[derive(Debug)]
@@ -142,6 +144,18 @@ pub fn utf8len(c: char) -> usize {
     c.encode_utf8(&mut buf).as_bytes().len()
 }
 
+pub fn const_0_term<'i>() -> Term<'i> {
+    Term::Natural("0")
+}
+pub fn const_0_term1<'i>() -> Term1<'i> {
+    Term1::Term(const_0_term())
+}
+
+pub fn const_0_expr<'i>() -> Expr<'i> {
+    Expr::Term1(const_0_term1())
+}
+
 pub fn obj_construct<'i>() -> Expr<'i> {
-    Expr::Term1(Term1::Term(Term::Natural("0")))
+    // TODO
+    const_0_expr()
 }
