@@ -62,11 +62,13 @@ pub Term: Term<'input> = {
   Ident                                               => Term::Var(<>),
   "[" <List2<",", Val>> "]"                           => Term::List(<>),
   "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
+  "{" "}"                                             => Term::TypeRecord(<_>::default()),
   "<" <List2<"|", TypeEnumField>> ">"                 => Term::TypeEnum(<>),
   "(" <Val> ")"                                       => Term::Expr(<>),
   "\"" <TextEntryList<"\"">>                          => Term::Text(<>),
   "''" <TextEntryList<"''">>                          => Term::Text(<>),
   Uri Guard?                                          => Term::Import(<>),
+  "{" "=" "}"                                         => Term::Record(<_>::default()),
   Record,
 };
 
