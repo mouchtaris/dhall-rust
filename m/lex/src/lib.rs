@@ -37,6 +37,7 @@ impl<'s> Lex<'s> {
         let inp = self.src();
 
         parse_whitespace(inp)
+            .or_else(|| parse_block_comment(inp))
             .or_else(|| parse_line_comment(inp))
             .or_else(|| parse_rel_uri(inp))
             .or_else(|| parse_punctuation(inp))
@@ -93,7 +94,7 @@ impl<'s> Iterator for Lex<'s> {
         log::debug!("expr: {:?}", token);
 
         match token {
-            Some((_, Token::Whitespace(_) | Token::LineComment(_), _)) => {
+            Some((_, Token::Whitespace(_) | Token::Comment(_), _)) => {
                 // skip comments
                 self.next()
             }
@@ -124,7 +125,7 @@ where
         .map(|(i, _)| to_token(&inp[0..=i]))
 }
 
-pub fn scan_parse<F, T>(inp: &str, to_token: T, mut length_adjustmentor: F) -> R<'_>
+fn scan_parse<F, T>(inp: &str, to_token: T, mut length_adjustmentor: F) -> R<'_>
 where
     F: FnMut(char) -> Option<i32>,
     T: FnOnce(&str) -> Token,
@@ -134,6 +135,13 @@ where
     let len = len as usize;
     let txt = &inp[0..len];
     Some(to_token(txt))
+}
+
+fn longer_than(n: usize) -> impl FnOnce(Token) -> R {
+    move |t| match t {
+        t if t.as_str().len() < n => None,
+        t => Some(t),
+    }
 }
 
 fn parse_whitespace(inp: &str) -> R<'_> {
@@ -151,7 +159,7 @@ fn parse_rel_uri(inp: &str) -> R<'_> {
         |&(i, c)| {
             (i == 0 && c == '.')
                 || (i == 1 && (c == '.' || c == '/'))
-                || (i >= 2 && !c.is_whitespace())
+                || (i >= 2 && !c.is_whitespace() && c != ')')
         },
     )
 }
@@ -187,7 +195,7 @@ fn parse_line_comment(inp: &str) -> R<'_> {
     let mut state = 0;
     scan_parse(
         inp,
-        |s| Token::LineComment(s),
+        |s| Token::Comment(s),
         move |c| {
             match (state, c) {
                 (0, '-') => state += 1,
@@ -199,10 +207,41 @@ fn parse_line_comment(inp: &str) -> R<'_> {
             Some(1)
         },
     )
-    .and_then(|t| match t {
-        t if t.as_str().len() < 2 => None,
-        t => Some(t),
-    })
+    .and_then(longer_than(2))
+}
+
+fn parse_block_comment(inp: &str) -> R<'_> {
+    let mut p = '_';
+    let mut done = false;
+    let mut booted = false;
+    scan_parse(
+        inp,
+        |s| Token::Comment(s),
+        move |c| {
+            if done {
+                return None;
+            }
+            let n = match (booted, &p, c) {
+                (false, _, '{') => 1,
+                (false, '{', '-') => {
+                    booted = true;
+                    1
+                }
+                (true, '-', '}') => {
+                    done = true;
+                    1
+                }
+                (true, _, _) => 1,
+                _ => {
+                    done = true;
+                    0
+                }
+            };
+            p = c;
+            Some(n)
+        },
+    )
+    .and_then(longer_than(4))
 }
 
 pub fn parse_dquot_raw_seg(inp: &str) -> R {

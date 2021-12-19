@@ -1,6 +1,6 @@
 // vim: et ts=2 sw=2
 // Bug with reporting one of those "self" as unused.
-use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry};
+use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident};
 use super::Error;
 grammar<'input>;
 
@@ -44,8 +44,8 @@ pub LetStmt =
 pub Term2: Term1<'input> = {
   <Box<Term1>> α <Box<Term2>>                         => Term1::Arrow(None, <>),
   φ "(" <i: Ident> ":" <t: Box<Term1>> ")" α <v: Box<Term2>>    => Term1::Arrow(Some(i), t, v),
-  Term1,
   "[" "]" ":" <Box<Term1>>   => Term1::Term(Term::List(<_>::default())),
+  Term1,
 };
 
 pub Term1: Term1<'input> = {
@@ -60,6 +60,7 @@ pub Term: Term<'input> = {
   Path                                                => Term::Path(<>),
   "[" <List2<",", Val>> "]"                           => Term::List(<>),
   "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
+  "<" <List2<"|", TypeEnumField>> ">"                 => Term::TypeEnum(<>),
   "(" <Val> ")"                                       => Term::Expr(<>),
   "\"" <TextEntryList>                                => Term::Text(<>),
   Uri Guard?                                          => Term::Import(<>),
@@ -77,6 +78,10 @@ pub RecordField: (Path<'input>, Val<'input>) = {
 
 pub TypeRecordField: (Path<'input>, Val<'input>) = {
   <Path> ":" <Val>          => (<>),
+};
+
+pub TypeEnumField: (Ident<'input>, Option<Val<'input>>) = {
+  <Ident> <(":" <Val>)?>    => (<>),
 };
 
 pub Uri = { RelUri, HttpsUri };

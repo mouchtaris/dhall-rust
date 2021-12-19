@@ -37,6 +37,7 @@ pub enum Term<'i> {
     List(Deq<Val<'i>>),
     Record(Deq<(Path<'i>, Val<'i>)>),
     TypeRecord(Deq<(Path<'i>, Val<'i>)>),
+    TypeEnum(Deq<(Ident<'i>, Option<Val<'i>>)>),
     Expr(Val<'i>),
     Import(&'i str, Option<(&'i str, Option<&'i str>)>),
 }
@@ -85,7 +86,7 @@ pub enum Token<'i> {
     Else(&'i str),
     TextImbue(&'i str),
     With(&'i str),
-    LineComment(&'i str),
+    Comment(&'i str),
     Empty(&'i str),
     Whitespace(&'i str),
     RawText(&'i str),
@@ -101,7 +102,7 @@ impl<'s> AsRef<str> for Token<'s> {
             | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
             | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
             | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
-            | TextImbue(s) | With(s) | LineComment(s) | Empty(s) | Whitespace(s) => s,
+            | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
         }
     }
 }

@@ -1,58 +1,36 @@
 {- vim: set ft=dhall : -}
-λ(io : Type) →
-λ(dt : Type) →
-  let Unit = < unit >
+let util/ = ../util/...
 
-  let wrt = io → dt → io
+let Path = List Text
 
-  let seq = List io → io
+let Path/Relation = < root | sibling | parent >
 
-  let opn = Unit → io
+let Path/to_text
+    : Path → Text
+    = util/.text/concat_sep "/"
 
-  let mty = io
+let Path/basename
+    : Path → Text
+    = let rev
+          : Path → Path
+          = util/.list/reverse Text
 
-  let cls = io → io
+      let head
+          : Path → Optional Text
+          = util/.list/head Text
 
-  let Proto = { wrt : wrt, seq : seq, opn : opn, cls : cls, mty : mty }
+      let name
+          : Optional Text → Text
+          = util/.opt/default Text ""
 
-  let proto = { wrt, seq, opn, cls, mty }
+      let `head >> name`
+          : (Path → Optional Text) → (Optional Text → Text) → Path → Text
+          = util/.fun/compose Path (Optional Text) Text
 
-  let params = { io, dt, Unit }
+      let `rev >> ...`
+          : (Path → Path) → (Path → Text) → Path → Text
+          = util/.fun/compose Path Path Text
 
-  let class = { Proto, proto, params }
+      in  `rev >> ...` rev (`head >> name` head name)
 
-  let fmt/deco =
-        λ(ft : Type) →
-          let fmt = ft → List dt
-
-          let prt = io → ft → io
-
-          let Proto = Proto ⩓ { fmt : fmt }
-
-          let proto =
-                  proto
-                ∧ { fmt
-                  , prt =
-                      λ(proto : Proto) →
-                        let map = (../util/...).list/map dt io
-
-                        let seq = proto.seq
-
-                        let wrt = proto.wrt
-
-                        let mty = proto.mty
-
-                        let fmt = proto.fmt
-
-                        in  λ(ios : io) →
-                            λ(t : ft) →
-                              seq [ ios, seq (map (wrt mty) (fmt t)) ]
-                  }
-
-          let Proto = Proto ⩓ { prt : prt }
-
-          let params = params ∧ { ft }
-
-          in  class ⫽ { Proto, proto, params }
-
-  in  { class, fmt/deco }
+in  { Path, Path/Relation, Path/basename, Path/to_text }
