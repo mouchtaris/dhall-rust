@@ -80,6 +80,7 @@ pub enum Token<'i> {
     Comma(&'i str),
     Dot(&'i str),
     Pipe(&'i str),
+    DDQuote(&'i str),
     DQuote(&'i str),
     SQuote(&'i str),
     Questionmark(&'i str),
@@ -98,12 +99,12 @@ impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s) | HttpUri(s)
-            | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
-            | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
-            | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
-            | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
-            | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
+            DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s)
+            | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s)
+            | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
+            | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s)
+            | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s)
+            | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
             | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
         }
     }

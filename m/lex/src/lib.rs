@@ -8,7 +8,8 @@ pub type Item<'s> = Span<usize, ast::Token<'s>>;
 pub struct Lex<'s> {
     source: &'s str,
     last_span: Item<'s>,
-    mode: u8,
+    mode: u16,
+    strstack: Vec<u16>,
 }
 
 impl<'s> Lex<'s> {
@@ -17,6 +18,7 @@ impl<'s> Lex<'s> {
             source,
             last_span: (0, Token::Empty(""), 0),
             mode: 0,
+            strstack: <_>::default(),
         }
     }
 
@@ -27,10 +29,6 @@ impl<'s> Lex<'s> {
             ..
         } = self;
         &source[s..]
-    }
-
-    pub fn next_dquot_raw(&mut self) -> R<'s> {
-        parse_dquot_raw_seg(self.src())
     }
 
     pub fn next_expr(&mut self) -> R<'s> {
@@ -48,30 +46,44 @@ impl<'s> Lex<'s> {
     }
 
     pub fn next_moody(&mut self) -> R<'s> {
-        let phase = self.mode % 5;
-        match phase {
-            0 | 2 => {
+        log::trace!("Mode: {}", self.mode);
+        match self.mode {
+            n if n % 3 == 0 => {
                 let tkn = self.next_expr();
                 match &tkn {
-                    Some(Token::DQuote(_)) if phase == 0 => {
-                        self.mode += 1;
-                    }
-                    Some(Token::DQuote(_)) if phase == 2 => {
-                        self.mode -= 2;
-                    }
-                    Some(Token::TextImbue(_)) if phase == 2 => {
-                        self.mode += 3;
-                    }
-                    Some(Token::RBrace(_)) if phase == 0 && self.mode > 0 => {
-                        self.mode -= 4;
+                    Some(Token::DQuote(_)) => self.mode += 1,
+                    Some(Token::DDQuote(_)) => self.mode += 4,
+                    Some(Token::RBrace(_)) if n > 0 => {
+                        self.mode -= self.strstack.pop().map(|x| x + 1).unwrap_or(0)
                     }
                     _ => (),
                 }
                 tkn
             }
-            1 => {
-                let tkn = self.next_dquot_raw();
+            n if n % 3 == 1 => {
+                let m = n % 6;
                 self.mode += 1;
+                match m {
+                    1 => parse_dquot_raw_seg(self.src()),
+                    4 => parse_ddquote_raw_seg(self.src()),
+                    o => panic!("{:?}", o),
+                }
+            }
+            n if n % 3 == 2 => {
+                let m = n % 6;
+                let tkn = self.next_expr();
+                match tkn {
+                    Some(Token::DQuote(_) | Token::DDQuote(_)) => {
+                        self.mode -= m;
+                    }
+                    Some(Token::TextImbue(_)) => {
+                        let s = 6 - m;
+                        log::trace!("strstack.push({})", s);
+                        self.strstack.push(s);
+                        self.mode += s
+                    }
+                    _ => (),
+                }
                 tkn
             }
             o => panic!("{:?}", o),
@@ -82,8 +94,6 @@ impl<'s> Lex<'s> {
 impl<'s> Iterator for Lex<'s> {
     type Item = Item<'s>;
     fn next(&mut self) -> Option<Self::Item> {
-        log::trace!("mode = {}", self.mode);
-
         let mut token = self
             .next_moody()
             .map(|t| (0, t, t.as_str().as_bytes().len()));
@@ -93,14 +103,16 @@ impl<'s> Iterator for Lex<'s> {
             self.last_span = span.to_owned();
         });
 
-        log::debug!("expr: {:?}", token);
-
         match token {
             Some((_, Token::Whitespace(_) | Token::Comment(_), _)) => {
+                log::trace!("tkn: {:?}", token);
                 // skip comments
                 self.next()
             }
-            token => token,
+            token => {
+                log::debug!("tkn: {:?}", token);
+                token
+            }
         }
     }
 }
@@ -320,7 +332,32 @@ pub fn parse_dquot_raw_seg(inp: &str) -> R {
                     done = true;
                     0
                 }
-                (_, '$', '{') | (_, '\'', '\'') => {
+                (_, '$', '{') => {
+                    done = true;
+                    -1
+                }
+                _ => 1,
+            };
+            q = p;
+            p = c;
+            Some(n)
+        },
+    )
+}
+
+pub fn parse_ddquote_raw_seg(inp: &str) -> R {
+    let mut p = '_';
+    let mut q = '_';
+    let mut done = false;
+    scan_parse(
+        inp,
+        |s| Token::RawText(s),
+        move |c| {
+            if done {
+                return None;
+            }
+            let n = match (&q, &p, c) {
+                (_, '\'', '\'') | (_, '$', '{') => {
                     done = true;
                     -1
                 }
@@ -356,10 +393,12 @@ fn parse_punctuation(inp: &str) -> R<'_> {
         .or_else(|| parse_verbatim(inp, "→", "->", |s| Arrow(s)))
         .or_else(|| parse_verbatim(inp, "λ", "\\", |s| Lambda(s)))
         .or_else(|| parse_verbatim(inp, "∀", "", |s| Forall(s)))
-        .or_else(|| parse_verbatim(inp, "\"", "''", |s| DQuote(s)))
+        .or_else(|| parse_verbatim(inp, "''", "", |s| DDQuote(s)))
+        .or_else(|| parse_verbatim(inp, "\"", "", |s| DQuote(s)))
         .or_else(|| parse_verbatim(inp, "++", "", |s| TextConcat(s)))
         .or_else(|| parse_verbatim(inp, "${", "", |s| TextImbue(s)))
         .or_else(|| parse_verbatim(inp, "::", "", |s| DColon(s)))
+        .or_else(|| parse_verbatim(inp, "''", "", |s| DDQuote(s)))
         .or_else(|| parse_verbatim(inp, "=", "", |s| Equals(s)))
         .or_else(|| parse_verbatim(inp, "(", "", |s| LPar(s)))
         .or_else(|| parse_verbatim(inp, ")", "", |s| RPar(s)))

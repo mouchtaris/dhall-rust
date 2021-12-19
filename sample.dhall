@@ -1,58 +1,168 @@
-{- vim: set ft=dhall : -}
-λ(io : Type) →
-λ(dt : Type) →
-  let Unit = < unit >
+let T = ./Policy.Type.dhall
 
-  let wrt = io → dt → io
+let u/ = T.u/
 
-  let seq = List io → io
+let to_json/ = T.to_json/
 
-  let opn = Unit → io
+let json/ = to_json/.json/
 
-  let mty = io
+let Capability = T.Capability
 
-  let cls = io → io
+let Path/unix = u/.text/concat_sep "/"
 
-  let Proto = { wrt : wrt, seq : seq, opn : opn, cls : cls, mty : mty }
+let Capability/show =
+      λ(cap : Capability) →
+        merge
+          { create = "create"
+          , read = "read"
+          , update = "update"
+          , list = "list"
+          , delete = "delete"
+          , sudo = "sudo"
+          , deny = "deny"
+          }
+          cap
 
-  let proto = { wrt, seq, opn, cls, mty }
+let Capability/to_json = to_json/.string Capability Capability/show
 
-  let params = { io, dt, Unit }
+let Capabilities/to_json = to_json/.list Capability Capability/to_json
 
-  let class = { Proto, proto, params }
+let AllowedParamsList/to_json = to_json/.list Text json/.string
 
-  let fmt/deco =
-        λ(ft : Type) →
-          let fmt = ft → List dt
+let AllowedParams/to_json =
+      to_json/.map T.AllowedParams AllowedParamsList/to_json
 
-          let prt = io → ft → io
+let to_json =
+      λ(entry : T.Entry) →
+        json/.object
+          ( toMap
+              { path =
+                  json/.object
+                    [ { mapKey = Path/unix entry.path
+                      , mapValue =
+                          json/.object
+                            ( toMap
+                                { capabilities =
+                                    Capabilities/to_json entry.capabilities
+                                , allowed_parameters =
+                                    AllowedParams/to_json
+                                      entry.allowed_parameters
+                                }
+                            )
+                      }
+                    ]
+              }
+          )
 
-          let Proto = Proto ⩓ { fmt : fmt }
+let to_hcl =
+      λ(entry : T.Entry) →
+        ''
+        path "${Path/unix entry.path}"
+        {
+          capabilities = ${json/.render
+                             (Capabilities/to_json entry.capabilities)}
+          allowed_parameters = ${json/.render
+                                   ( AllowedParams/to_json
+                                       entry.allowed_parameters
+                                   )}
+        }
+        ''
 
-          let proto =
-                  proto
-                ∧ { fmt
-                  , prt =
-                      λ(proto : Proto) →
-                        let map = (../util/...).list/map dt io
+let param =
+    -- Name	Description
+    -- identity.entity.id	The entity's ID
+    -- identity.entity.name	The entity's name
+    -- identity.entity.metadata.<metadata key>	Metadata associated with the entity for the given key
+    -- identity.entity.aliases.<mount accessor>.id	Entity alias ID for the given mount
+    -- identity.entity.aliases.<mount accessor>.name	Entity alias name for the given mount
+    -- identity.entity.aliases.<mount accessor>.metadata.<metadata key>	Metadata associated with the alias for the given mount and metadata key
+    -- identity.groups.ids.<group id>.name	The group name for the given group ID
+    -- identity.groups.names.<group name>.id	The group ID for the given group name
+    -- identity.groups.ids.<group id>.metadata.<metadata key>	Metadata associated with the group for the given key
+    -- identity.groups.names.<group name>.metadata.<metadata key>
+      let Prefix
+          : Type
+          = Text → Text
 
-                        let seq = proto.seq
+      let _/new = λ(p : Text) → λ(s : Text) → p ++ s
 
-                        let wrt = proto.wrt
+      let _/with = λ(p : Text) → _/new 
+      "${p}."
 
-                        let mty = proto.mty
+      let _/plus = λ(a : Prefix) → λ(b : Prefix) → λ(s : Text) → a (b s)
 
-                        let fmt = proto.fmt
+      let _/pw
+          : Text → Prefix → Prefix
+          = λ(b : Text) → λ(a : Prefix) → _/plus a (_/with b)
 
-                        in  λ(ios : io) →
-                            λ(t : ft) →
-                              seq [ ios, seq (map (wrt mty) (fmt t)) ]
+      let _/identity = _/pw "identity"
+
+      let _/entity = _/pw "entity"
+
+      let _/metadata = _/pw "metadata"
+
+      let _/aliases = _/pw "aliases"
+
+      let _/groups = _/pw "groups"
+
+      let _/ids = _/pw "ids"
+
+      let _/names = _/pw "names"
+
+      let _/ = _/new ""
+
+      in  { identity =
+              let _/ = _/identity _/
+
+              in  { entity =
+                      let _/ = _/entity _/
+
+                      in  { id = _/ "id"
+                          , name = _/ "name"
+                          , metadata = _/metadata _/
+                          , aliases =
+                              let _/ = _/aliases _/
+
+                              in  λ(mount_accessor : Text) →
+                                    let _/ = _/pw mount_accessor _/
+
+                                    in  { id = _/ "id"
+                                        , name = _/ "name"
+                                        , metadata = _/metadata _/
+                                        }
+                          }
+                  , groups =
+                      let _/ = _/groups _/
+
+                      in  { ids =
+                              let _/ = _/ids _/
+
+                              in  λ(group_id : Text) →
+                                    let _/ = _/pw group_id _/
+
+                                    in  { name = _/ "name"
+                                        , metadata = _/metadata _/
+                                        }
+                          , names =
+                              let _/ = _/names _/
+
+                              in  λ(group_name : Text) →
+                                    let _/ = _/pw group_name _/
+
+                                    in  { id = _/ "id"
+                                        , metadata = _/metadata _/
+                                        }
+                          }
                   }
+          }
 
-          let Proto = Proto ⩓ { prt : prt }
-
-          let params = params ∧ { ft }
-
-          in  class ⫽ { Proto, proto, params }
-
-  in  { class, fmt/deco }
+in    { param
+      , to_json
+      , to_hcl
+      , Capability/show
+      , AllowedParams/to_json
+      , AllowedParamsList/to_json
+      , Capabilities/to_json
+      , Capability/to_json
+      }
+    : T.Type

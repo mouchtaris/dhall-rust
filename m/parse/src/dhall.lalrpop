@@ -63,7 +63,8 @@ pub Term: Term<'input> = {
   "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
   "<" <List2<"|", TypeEnumField>> ">"                 => Term::TypeEnum(<>),
   "(" <Val> ")"                                       => Term::Expr(<>),
-  "\"" <TextEntryList>                                => Term::Text(<>),
+  "\"" <TextEntryList<"\"">>                          => Term::Text(<>),
+  "''" <TextEntryList<"''">>                          => Term::Text(<>),
   Uri Guard?                                          => Term::Import(<>),
   Record,
 };
@@ -89,9 +90,14 @@ pub Uri = { RelUri, HttpUri };
 
 pub Guard = Sha256 ("?" <Uri>)?;
 
-pub TextEntryList: Deq<TextEntry<'input>> = {
-  "\""                                                        => Deq::new(),
-  <t: RawText> <v: ("${" <Val> "}")?>  <mut l: TextEntryList> => { l.push_back((t, v)); l },
+TextEntryList<END>: Deq<TextEntry<'input>> = {
+  END =>
+    Deq::new(),
+
+  <t: RawText> <v: ("${" <Val> "}")?>  <mut l: TextEntryList<END>> => {
+    l.push_front((t, v));
+    l
+  },
 };
 
 extern {
@@ -135,6 +141,7 @@ extern {
     "'"       => Token::SQuote(<&'input str>),
     "?"       => Token::Questionmark(<&'input str>),
     "::"      => Token::DColon(<&'input str>),
+    "''"      => Token::DDQuote(<&'input str>),
     "if"      => Token::If(<&'input str>),
     "then"    => Token::Then(<&'input str>),
     "else"    => Token::Else(<&'input str>),
