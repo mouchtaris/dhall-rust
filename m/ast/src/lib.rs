@@ -4,6 +4,7 @@ pub use std::collections::VecDeque as Deq;
 
 pub type Ident<'i> = &'i str;
 pub type Path<'i> = Deq<Ident<'i>>;
+pub type TermPath<'i> = Deq<Box<Term<'i>>>;
 
 pub type RecField<'i> = (Path<'i>, Val<'i>);
 
@@ -32,7 +33,8 @@ pub enum Term1<'i> {
 #[derive(Debug)]
 pub enum Term<'i> {
     Natural(&'i str),
-    Path(Path<'i>),
+    Path(TermPath<'i>),
+    Var(Ident<'i>),
     Text(Deq<TextEntry<'i>>),
     List(Deq<Val<'i>>),
     Record(Deq<(Path<'i>, Val<'i>)>),
@@ -130,7 +132,7 @@ pub fn deq<T>(t: T) -> Deq<T> {
 }
 
 pub fn path_expr(path: Path) -> Expr<'_> {
-    Expr::Term1(Term1::Term(Term::Path(path)))
+    Expr::Term1(Term1::Term(Term::Var(path.front().unwrap())))
 }
 
 pub fn utf8len(c: char) -> usize {
