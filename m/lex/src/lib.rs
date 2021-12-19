@@ -357,6 +357,7 @@ pub fn parse_dquot_raw_seg(inp: &str) -> R {
 pub fn parse_ddquote_raw_seg(inp: &str) -> R {
     let mut p = '_';
     let mut q = '_';
+    let mut r = '_';
     let mut done = false;
     scan_parse(
         inp,
@@ -365,13 +366,19 @@ pub fn parse_ddquote_raw_seg(inp: &str) -> R {
             if done {
                 return None;
             }
-            let n = match (&q, &p, c) {
-                (_, '\'', '\'') | (_, '$', '{') => {
+            let n = match (&r, &q, &p, c) {
+                ('\'', '\'', '$', '{') => 1,
+                ('\'', '\'', _, _) => {
+                    done = true;
+                    -3
+                }
+                (_, _, '$', '{') => {
                     done = true;
                     -1
                 }
                 _ => 1,
             };
+            r = q;
             q = p;
             p = c;
             Some(n)
