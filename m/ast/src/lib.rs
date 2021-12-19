@@ -33,6 +33,7 @@ pub enum Term1<'i> {
 #[derive(Debug)]
 pub enum Term<'i> {
     Natural(&'i str),
+    Negative(&'i str),
     Path(TermPath<'i>),
     Var(Ident<'i>),
     Text(Deq<TextEntry<'i>>),

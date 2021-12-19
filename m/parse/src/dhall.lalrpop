@@ -54,6 +54,7 @@ pub Term1: Term1<'input> = {
   <Box<Term1>> "with" <Path> "=" <Term>               => Term1::With(<>),
   <Box<Term1>> <Term>                                 => Term1::Evaluation(<>),
   Box<Term1> Op Term                                  => Term1::Operation(<>),
+  "-" <Natural>                                       => Term1::Term(Term::Negative(<>)),
 };
 
 pub Term: Term<'input> = {

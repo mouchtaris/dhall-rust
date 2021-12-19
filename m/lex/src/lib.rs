@@ -147,7 +147,12 @@ where
     let len: i32 = inp.chars().scan((), |_, c| length_adjustmentor(c)).sum();
 
     let len = len as usize;
-    let bytelen = inp.char_indices().take(len).last().map(|(i, c)| ast::utf8len(c) + i).unwrap_or(0);
+    let bytelen = inp
+        .char_indices()
+        .take(len)
+        .last()
+        .map(|(i, c)| ast::utf8len(c) + i)
+        .unwrap_or(0);
     let txt = &inp[0..bytelen];
     Some(to_token(txt))
 }
