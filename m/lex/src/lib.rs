@@ -173,6 +173,26 @@ fn parse_ident_or_keyword(inp: &str) -> R<'_> {
                 || (i >= 1 && (c.is_alphanumeric() || c == '_' || c == '-' || c == '/'))
         },
     )
+    .or_else(|| {
+        scan_parse(inp, |s| Token::Ident(s), {
+            let mut state = 0;
+            move |c| {
+                Some(match (state, c) {
+                    (0, '`') => {
+                        state += 1;
+                        1
+                    }
+                    (1, '`') => {
+                        state += 1;
+                        1
+                    }
+                    (2, _) => return None,
+                    _ => 1,
+                })
+            }
+        })
+        .and_then(longer_than(2))
+    })
     .map(|mut tkn| {
         const STRTOKS: &[(&str, fn(&str) -> Token)] = &[
             ("let", |s| Token::Let(s)),
