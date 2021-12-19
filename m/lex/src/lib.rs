@@ -36,7 +36,8 @@ impl<'s> Lex<'s> {
 
         parse_whitespace(inp)
             .or_else(|| parse_block_comment(inp))
-            .or_else(|| parse_line_comment(inp))
+            .or_else(|| parse_line_comment1(inp))
+            .or_else(|| parse_line_comment2(inp))
             .or_else(|| parse_rel_uri(inp))
             .or_else(|| parse_http_uri(inp))
             .or_else(|| parse_sha256(inp))
@@ -271,7 +272,7 @@ fn parse_ident_or_keyword(inp: &str) -> R<'_> {
     })
 }
 
-fn parse_line_comment(inp: &str) -> R<'_> {
+fn parse_line_comment1(inp: &str) -> R<'_> {
     let mut state = 0;
     scan_parse(
         inp,
@@ -280,6 +281,25 @@ fn parse_line_comment(inp: &str) -> R<'_> {
             match (state, c) {
                 (0, '-') => state += 1,
                 (1, '-') => state += 1,
+                (2, '\n') => state += 1,
+                (2, _) => (),
+                _ => return None,
+            };
+            Some(1)
+        },
+    )
+    .and_then(longer_than(2))
+}
+
+fn parse_line_comment2(inp: &str) -> R<'_> {
+    let mut state = 0;
+    scan_parse(
+        inp,
+        |s| Token::Comment(s),
+        move |c| {
+            match (state, c) {
+                (0, '#') => state += 1,
+                (1, '!') => state += 1,
                 (2, '\n') => state += 1,
                 (2, _) => (),
                 _ => return None,
