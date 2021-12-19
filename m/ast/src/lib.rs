@@ -135,10 +135,6 @@ pub fn deq<T>(t: T) -> Deq<T> {
     d
 }
 
-pub fn path_expr(path: Path) -> Expr<'_> {
-    Expr::Term1(Term1::Term(Term::Var(path.front().unwrap())))
-}
-
 pub fn utf8len(c: char) -> usize {
     let mut buf = [0u8; 4];
     c.encode_utf8(&mut buf).as_bytes().len()
@@ -155,7 +151,6 @@ pub fn const_0_expr<'i>() -> Expr<'i> {
     Expr::Term1(const_0_term1())
 }
 
-pub fn obj_construct<'i>() -> Expr<'i> {
-    // TODO
-    const_0_expr()
+pub fn var_expr(s: &str) -> Expr {
+    Expr::Term1(Term1::Term(Term::Var(s)))
 }

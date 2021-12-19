@@ -79,7 +79,7 @@ pub Record: Term<'input> = {
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
-  Path                      => (<>.to_owned(), Box::new(ast::path_expr(<>))),
+  Ident                     => (ast::deq(<>), Box::new(ast::var_expr(<>))),
   <Path> "=" <Val>          => (<>),
 };
 
