@@ -42,9 +42,9 @@ pub LetStmt =
 ;
 
 pub Term2: Term1<'input> = {
-  <Box<Term1>> α <Box<Term2>>                         => Term1::Arrow(None, <>),
-  φ "(" <i: Ident> ":" <t: Box<Term1>> ")" α <v: Box<Term2>>    => Term1::Arrow(Some(i), t, v),
-  "[" "]" ":" <Box<Term1>>   => Term1::Term(Term::List(<_>::default())),
+  <Box<Term1>> α <Box<Term2>>                                 => Term1::Arrow(None, <>),
+  φ "(" <i: Ident> ":" <t: Box<Term2>> ")" α <v: Box<Term2>>  => Term1::Arrow(Some(i), t, v),
+  "[" "]" ":" <Box<Term1>>                        => Term1::Term(Term::List(<_>::default())),
   Term1,
 };
 
@@ -84,7 +84,7 @@ pub TypeEnumField: (Ident<'input>, Option<Val<'input>>) = {
   <Ident> <(":" <Val>)?>    => (<>),
 };
 
-pub Uri = { RelUri, HttpsUri };
+pub Uri = { RelUri, HttpUri };
 
 pub Guard = Sha256 ("?" <Uri>)?;
 
@@ -143,7 +143,7 @@ extern {
     Natural   => Token::Natural(<&'input str>),
     Ident     => Token::Ident(<&'input str>),
     RelUri    => Token::RelUri(<&'input str>),
-    HttpsUri  => Token::HttpsUri(<&'input str>),
+    HttpUri   => Token::HttpUri(<&'input str>),
     Sha256    => Token::Sha256(<&'input str>),
     RawText   => Token::RawText(<&'input str>),
   }

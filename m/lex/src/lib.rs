@@ -40,6 +40,8 @@ impl<'s> Lex<'s> {
             .or_else(|| parse_block_comment(inp))
             .or_else(|| parse_line_comment(inp))
             .or_else(|| parse_rel_uri(inp))
+            .or_else(|| parse_http_uri(inp))
+            .or_else(|| parse_sha256(inp))
             .or_else(|| parse_punctuation(inp))
             .or_else(|| parse_natural(inp))
             .or_else(|| parse_ident_or_keyword(inp))
@@ -162,6 +164,43 @@ fn parse_rel_uri(inp: &str) -> R<'_> {
                 || (i >= 2 && !c.is_whitespace() && c != ')')
         },
     )
+    .and_then(longer_than(2))
+}
+
+fn parse_http_uri(inp: &str) -> R<'_> {
+    range_parse(
+        inp,
+        |s| Token::HttpUri(s),
+        |&(i, c)| {
+            (i == 0 && c == 'h')
+                || (i == 1 && c == 't')
+                || (i == 2 && c == 't')
+                || (i == 3 && c == 'p')
+                || (i == 4 && (c == ':' || c == 's'))
+                || (i == 5 && (c == '/' || c == ':'))
+                || (i == 6 && (c == '/' || c == '/'))
+                || (i >= 7 && !c.is_whitespace() && c != ')')
+        },
+    )
+    .and_then(longer_than(7))
+}
+
+fn parse_sha256(inp: &str) -> R<'_> {
+    range_parse(
+        inp,
+        |s| Token::Sha256(s),
+        |&(i, c)| {
+                   (i == 0 && c == 's')
+                || (i == 1 && c == 'h')
+                || (i == 2 && c == 'a')
+                || (i == 3 && c == '2')
+                || (i == 4 && c == '5')
+                || (i == 5 && c == '6')
+                || (i == 6 && c == ':')
+                || (i >= 7 && i < (7 + 64))
+        },
+    )
+    .and_then(longer_than(7 + 63))
 }
 
 fn parse_ident_or_keyword(inp: &str) -> R<'_> {

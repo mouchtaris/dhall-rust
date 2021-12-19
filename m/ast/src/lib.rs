@@ -48,7 +48,7 @@ pub enum Token<'i> {
     Natural(&'i str),
     Text(&'i str),
     RelUri(&'i str),
-    HttpsUri(&'i str),
+    HttpUri(&'i str),
     Sha256(&'i str),
     Conj1(&'i str),
     Conj2(&'i str),
@@ -96,7 +96,7 @@ impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s) | HttpsUri(s)
+            DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s) | HttpUri(s)
             | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
             | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
             | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
