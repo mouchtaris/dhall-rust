@@ -1,10 +1,10 @@
 // vim: et ts=2 sw=2
 // Bug with reporting one of those "self" as unused.
-use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt};
+use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry};
 use super::Error;
 grammar<'input>;
 
-pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\", ":" };
+pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\", ":", "::" };
 
 Box<T>: Box<T> = T => Box::new(<>);
 Paren<T>: T = "(" <T> ")";
@@ -45,6 +45,7 @@ pub Term2: Term1<'input> = {
   <Box<Term1>> α <Box<Term2>>                         => Term1::Arrow(None, <>),
   φ "(" <i: Ident> ":" <t: Box<Term1>> ")" α <v: Box<Term2>>    => Term1::Arrow(Some(i), t, v),
   Term1,
+  "[" "]" ":" <Box<Term1>>   => Term1::Term(Term::List(<_>::default())),
 };
 
 pub Term1: Term1<'input> = {
@@ -57,10 +58,16 @@ pub Term1: Term1<'input> = {
 pub Term: Term<'input> = {
   Natural                                             => Term::Natural(<>),
   Path                                                => Term::Path(<>),
-  "{" <List2<",", RecordField>> "}"                   => Term::Record(<>),
+  "[" <List2<",", Val>> "]"                           => Term::List(<>),
   "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
   "(" <Val> ")"                                       => Term::Expr(<>),
+  "\"" <TextEntryList>                                => Term::Text(<>),
   Uri Guard?                                          => Term::Import(<>),
+  Record,
+};
+
+pub Record: Term<'input> = {
+  "{" <List2<",", RecordField>> "}"                   => Term::Record(<>),
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
@@ -75,6 +82,11 @@ pub TypeRecordField: (Path<'input>, Val<'input>) = {
 pub Uri = { RelUri, HttpsUri };
 
 pub Guard = Sha256 ("?" <Uri>)?;
+
+pub TextEntryList: Deq<TextEntry<'input>> = {
+  "\""                                                        => Deq::new(),
+  <t: RawText> <v: ("${" <Val> "}")?>  <mut l: TextEntryList> => { l.push_back((t, v)); l },
+};
 
 extern {
   type Location = usize;
@@ -116,6 +128,7 @@ extern {
     "\""      => Token::DQuote(<&'input str>),
     "'"       => Token::SQuote(<&'input str>),
     "?"       => Token::Questionmark(<&'input str>),
+    "::"      => Token::DColon(<&'input str>),
     "if"      => Token::If(<&'input str>),
     "then"    => Token::Then(<&'input str>),
     "else"    => Token::Else(<&'input str>),
@@ -127,5 +140,6 @@ extern {
     RelUri    => Token::RelUri(<&'input str>),
     HttpsUri  => Token::HttpsUri(<&'input str>),
     Sha256    => Token::Sha256(<&'input str>),
+    RawText   => Token::RawText(<&'input str>),
   }
 }

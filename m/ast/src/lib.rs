@@ -11,6 +11,8 @@ pub type Val<'i> = Box<Expr<'i>>;
 
 pub type LetStmt<'i> = (Ident<'i>, Option<Val<'i>>, Val<'i>);
 
+pub type TextEntry<'i> = (&'i str, Option<Val<'i>>);
+
 #[derive(Debug)]
 pub enum Expr<'i> {
     Term1(Term1<'i>),
@@ -31,6 +33,8 @@ pub enum Term1<'i> {
 pub enum Term<'i> {
     Natural(&'i str),
     Path(Path<'i>),
+    Text(Deq<TextEntry<'i>>),
+    List(Deq<Val<'i>>),
     Record(Deq<(Path<'i>, Val<'i>)>),
     TypeRecord(Deq<(Path<'i>, Val<'i>)>),
     Expr(Val<'i>),
@@ -56,6 +60,7 @@ pub enum Token<'i> {
     LPar(&'i str),
     RPar(&'i str),
     Colon(&'i str),
+    DColon(&'i str),
     Forall(&'i str),
     TextConcat(&'i str),
     ListConcat(&'i str),
@@ -83,19 +88,20 @@ pub enum Token<'i> {
     LineComment(&'i str),
     Empty(&'i str),
     Whitespace(&'i str),
+    RawText(&'i str),
 }
 
 impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            Ident(s) | Natural(s) | Text(s) | RelUri(s) | HttpsUri(s) | Sha256(s) | Conj1(s)
-            | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s)
-            | RPar(s) | Colon(s) | Forall(s) | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s)
-            | Star(s) | Minus(s) | LBrace(s) | RBrace(s) | LBracket(s) | RBracket(s)
-            | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s) | DQuote(s) | SQuote(s)
-            | Questionmark(s) | If(s) | Then(s) | Else(s) | TextImbue(s) | With(s)
-            | LineComment(s) | Empty(s) | Whitespace(s) => s,
+            DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s) | HttpsUri(s)
+            | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
+            | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
+            | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
+            | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
+            | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
+            | TextImbue(s) | With(s) | LineComment(s) | Empty(s) | Whitespace(s) => s,
         }
     }
 }
@@ -103,6 +109,16 @@ impl<'s> AsRef<str> for Token<'s> {
 impl<'s> Token<'s> {
     pub fn as_str(&self) -> &str {
         self.as_ref()
+    }
+
+    pub fn is_ident<I: ?Sized>(&self, name: &I) -> bool
+    where
+        I: std::cmp::PartialEq<str>,
+    {
+        match self {
+            &Token::Ident(v) if name == v => true,
+            _ => false,
+        }
     }
 }
 
@@ -119,4 +135,8 @@ pub fn path_expr(path: Path) -> Expr<'_> {
 pub fn utf8len(c: char) -> usize {
     let mut buf = [0u8; 4];
     c.encode_utf8(&mut buf).as_bytes().len()
+}
+
+pub fn obj_construct<'i>() -> Expr<'i> {
+    Expr::Term1(Term1::Term(Term::Natural("0")))
 }
