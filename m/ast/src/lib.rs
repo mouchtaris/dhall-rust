@@ -14,6 +14,8 @@ pub type LetStmt<'i> = (Ident<'i>, Option<Val<'i>>, Val<'i>);
 
 pub type TextEntry<'i> = (&'i str, Option<Val<'i>>);
 
+pub type RecordEntry<'i> = (Path<'i>, Val<'i>);
+
 #[derive(Debug)]
 pub enum Expr<'i> {
     Term1(Term1<'i>),
@@ -38,10 +40,10 @@ pub enum Term<'i> {
     Negative(&'i str),
     Path(TermPath<'i>),
     Var(Ident<'i>),
-    Text(Deq<TextEntry<'i>>),
+    Text(u8, Deq<TextEntry<'i>>),
     List(Deq<Val<'i>>),
-    Record(Deq<(Path<'i>, Val<'i>)>),
-    TypeRecord(Deq<(Path<'i>, Val<'i>)>),
+    Record(Deq<RecordEntry<'i>>),
+    TypeRecord(Deq<RecordEntry<'i>>),
     TypeEnum(Deq<(Ident<'i>, Option<Val<'i>>)>),
     Expr(Val<'i>),
     Import(&'i str, Option<(&'i str, Option<&'i str>)>),

@@ -259,6 +259,7 @@ fn parse_ident_or_keyword(inp: &str) -> R<'_> {
             ("if", |s| Token::If(s)),
             ("then", |s| Token::Then(s)),
             ("else", |s| Token::Else(s)),
+            ("forall", |s| Token::Forall(s)),
         ];
 
         for &(s, to_token) in STRTOKS {

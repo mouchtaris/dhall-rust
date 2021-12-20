@@ -4,6 +4,7 @@ members = [
     'm/cli',
     'm/lex',
     'm/parse',
+    'm/show',
 ]
 [patch.crates-io.ast]
 path = 'm/ast'
@@ -16,3 +17,6 @@ path = 'm/lex'
 
 [patch.crates-io.parse]
 path = 'm/parse'
+
+[patch.crates-io.show]
+path = 'm/show'

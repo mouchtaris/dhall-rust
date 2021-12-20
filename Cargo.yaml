@@ -6,6 +6,7 @@ module:
     dep_mod:
       - parse
       - lex
+      - show
     dep_crate:
       - log
       - thiserror
@@ -24,6 +25,9 @@ module:
     dep_crate:
       - log
       - thiserror
+  show:
+    dep_mod:
+      - ast
   ast:
     dep_mod: []
     dep_crate: []
