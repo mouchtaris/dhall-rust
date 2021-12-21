@@ -70,12 +70,12 @@ pub Term: Term<'input> = {
   "(" <Val> ")"                                             => new::term::expr(<>),
   "\"" <TextEntryList<"\"">>                                => new::term::text((1, <>)),
   "''" <TextEntryList<"''">>                                => new::term::text((2, <>)),
-  "{" "=" "}"                                               => new::term::record(RecordData::default()),
   Record                                                    => new::term::record(<>),
 };
 
-pub Record: ast::RecordData<'input> = {
-  "{" <List2<",", RecordField>> "}"
+pub Record: RecordData<'input> = {
+  "{" <List2<",", RecordField>> "}",
+  "{" "=" "}"                                               => <_>::default()
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
