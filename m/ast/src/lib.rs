@@ -15,6 +15,7 @@ pub type LetStmt<'i> = (Ident<'i>, Option<Val<'i>>, Val<'i>);
 pub type TextEntry<'i> = (&'i str, Option<Val<'i>>);
 
 pub type RecordEntry<'i> = (Path<'i>, Val<'i>);
+pub type RecordData<'i> = Deq<RecordEntry<'i>>;
 
 #[derive(Debug)]
 pub enum Expr<'i> {
@@ -42,11 +43,12 @@ pub enum Term<'i> {
     Var(Ident<'i>),
     Text(u8, Deq<TextEntry<'i>>),
     List(Deq<Val<'i>>),
-    Record(Deq<RecordEntry<'i>>),
-    TypeRecord(Deq<RecordEntry<'i>>),
+    Record(RecordData<'i>),
+    TypeRecord(RecordData<'i>),
     TypeEnum(Deq<(Ident<'i>, Option<Val<'i>>)>),
-    Expr(Val<'i>),
     Import(&'i str, Option<(&'i str, Option<&'i str>)>),
+    Expr(Val<'i>),
+    Merge(RecordData<'i>, Box<Term<'i>>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -98,15 +100,16 @@ pub enum Token<'i> {
     Empty(&'i str),
     Whitespace(&'i str),
     RawText(&'i str),
+    Merge(&'i str),
 }
 
 impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s) | RelUri(s)
-            | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s)
-            | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
+            Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s)
+            | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s)
+            | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
             | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s)
             | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s)
             | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)

@@ -85,11 +85,20 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             }
             Import(path, Some((guard, None))) => write!(f, "({} {})", path, guard),
             Import(path, None) => write!(f, "({})", path),
-            Record(fields) => print_list(f, "{", "}", "=", ",", true, fields),
-            TypeRecord(fields) => print_list(f, "{", "}", ":", ",", true, fields),
-            TypeEnum(fields) => print_list(f, "<", ">", ":", "|", true, fields),
-            List(fields) => print_list(f, "[", "]", "", ",", true, fields),
+            Record(fields) => print_list(f, SHOW_LIST_STYLE_REC, fields),
+            TypeRecord(fields) => print_list(f, SHOW_LIST_STYLE_TYPEREC, fields),
+            TypeEnum(fields) => print_list(f, SHOW_LIST_STYLE_TYPEENUM, fields),
+            List(fields) => print_list(f, SHOW_LIST_STYLE_LIST, fields),
             Expr(expr) => write!(f, "{}", Show(expr.as_ref())),
+            Merge(term, val) => {
+                write!(
+                    f,
+                    "merge {} {}",
+                    Show(ShowList(SHOW_LIST_STYLE_REC, term)),
+                    Show(val.as_ref())
+                )
+            }
+            Negative(n) => write!(f, "({})", n),
             Text(n, entries) => {
                 write!(f, "(")?;
                 let mut first = true;
@@ -112,25 +121,18 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                 write!(f, ")")?;
                 Ok(())
             }
-            Negative(n) => write!(f, "({})", n),
             o => panic!("How to show {:?}", o),
         }
     }
 }
 
-fn print_list<'i, P>(
-    f: &mut fmt::Formatter,
-    open: &str,
-    close: &str,
-    assign: &'i str,
-    sep: &str,
-    first_sep: bool,
-    list: P,
-) -> fmt::Result
+fn print_list<'i, P>(f: &mut fmt::Formatter, style: ShowListStyle<'i>, list: P) -> fmt::Result
 where
     P: IntoIterator,
     Show<ListEntry<'i, P::Item>>: fmt::Display,
 {
+    let ShowListStyle(open, close, assign, sep, first_sep) = style;
+
     write!(f, "{}", open)?;
 
     let mut first = true;
@@ -145,6 +147,14 @@ where
     Ok(())
 }
 
+#[derive(Copy, Clone)]
+struct ShowListStyle<'s>(&'s str, &'s str, &'s str, &'s str, bool);
+const SHOW_LIST_STYLE_REC: ShowListStyle = ShowListStyle("{", "}", "=", ",", true);
+const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",", true);
+const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", true);
+const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", true);
+
+struct ShowList<'i, P>(ShowListStyle<'i>, &'i P);
 struct ListEntry<'i, E>(&'i str, E);
 struct Path<T>(T);
 struct SText<'i>(u8, &'i str);
@@ -205,5 +215,16 @@ impl<'i> fmt::Display for Show<SText<'i>> {
             _ => "''",
         };
         write!(f, "{mark}{text}{mark}", mark = mark, text = text)
+    }
+}
+
+impl<'i, P, I> fmt::Display for Show<ShowList<'i, P>>
+where
+    &'i P: IntoIterator<Item = I>,
+    Show<ListEntry<'i, I>>: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let &ShowList(style, list) = &self.0;
+        print_list(f, style, list)
     }
 }

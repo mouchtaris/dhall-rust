@@ -51,31 +51,32 @@ pub Term2: Term1<'input> = {
 };
 
 pub Term1: Term1<'input> = {
-  Term                                                => Term1::Term(<>),
-  <Box<Term1>> "with" <Path> "=" <Term>               => Term1::With(<>),
-  <Box<Term1>> <Term>                                 => Term1::Evaluation(<>),
-  Box<Term1> Op Term                                  => Term1::Operation(<>),
-  "-" <Natural>                                       => Term1::Term(Term::Negative(<>)),
+  Term                                                      => Term1::Term(<>),
+  <Box<Term1>> "with" <Path> "=" <Term>                     => Term1::With(<>),
+  <Box<Term1>> <Term>                                       => Term1::Evaluation(<>),
+  Box<Term1> Op Term                                        => Term1::Operation(<>),
+  "-" <Natural>                                             => Term1::Term(Term::Negative(<>)),
 };
 
 pub Term: Term<'input> = {
-  Natural                                             => Term::Natural(<>),
-  Ident                                               => Term::Var(<>),
-  "[" "]"                                             => Term::List(<_>::default()),
-  "[" <List2<",", Val>> "]"                           => Term::List(<>),
-  "{" <List2<",", TypeRecordField>> "}"               => Term::TypeRecord(<>),
-  "{" "}"                                             => Term::TypeRecord(<_>::default()),
-  "<" <List2<"|", TypeEnumField>> ">"                 => Term::TypeEnum(<>),
-  "(" <Val> ")"                                       => Term::Expr(<>),
-  "\"" <TextEntryList<"\"">>                          => Term::Text(1, <>),
-  "''" <TextEntryList<"''">>                          => Term::Text(2, <>),
-  Uri Guard?                                          => Term::Import(<>),
-  "{" "=" "}"                                         => Term::Record(<_>::default()),
-  Record,
+  Natural                                                   => Term::Natural(<>),
+  Ident                                                     => Term::Var(<>),
+  "[" "]"                                                   => Term::List(<_>::default()),
+  "[" <List2<",", Val>> "]"                                 => Term::List(<>),
+  "{" <List2<",", TypeRecordField>> "}"                     => Term::TypeRecord(<>),
+  "{" "}"                                                   => Term::TypeRecord(<_>::default()),
+  "<" <List2<"|", TypeEnumField>> ">"                       => Term::TypeEnum(<>),
+  "(" <Val> ")"                                             => Term::Expr(<>),
+  "\"" <TextEntryList<"\"">>                                => Term::Text(1, <>),
+  "''" <TextEntryList<"''">>                                => Term::Text(2, <>),
+  Uri Guard?                                                => Term::Import(<>),
+  "{" "=" "}"                                               => Term::Record(<_>::default()),
+  Record                                                    => Term::Record(<>),
+  "merge" <Record> <Box<Term>>                              => Term::Merge(<>),
 };
 
-pub Record: Term<'input> = {
-  "{" <List2<",", RecordField>> "}"                   => Term::Record(<>),
+pub Record: ast::RecordData<'input> = {
+  "{" <List2<",", RecordField>> "}"
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
@@ -147,10 +148,11 @@ extern {
     "?"       => Token::Questionmark(<&'input str>),
     "::"      => Token::DColon(<&'input str>),
     "''"      => Token::DDQuote(<&'input str>),
+    "${"      => Token::TextImbue(<&'input str>),
     "if"      => Token::If(<&'input str>),
     "then"    => Token::Then(<&'input str>),
     "else"    => Token::Else(<&'input str>),
-    "${"      => Token::TextImbue(<&'input str>),
+    "merge"   => Token::Merge(<&'input str>),
     "with"    => Token::With(<&'input str>),
     Text      => Token::Text(<&'input str>),
     Natural   => Token::Natural(<&'input str>),
