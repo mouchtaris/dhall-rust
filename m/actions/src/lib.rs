@@ -69,5 +69,15 @@ pub mod new {
                         Term::Integer(is_neg, n)
                 }
         }
+
+        impl_report! {
+        project -> Term 's
+            : (Box<Term<'s>>, Deq<Ident<'s>>)
+            = |(term, names)| Term::Project(1, term, names) }
+
+        impl_report! {
+        select -> Term 's
+            : (Box<Term<'s>>, Deq<Ident<'s>>)
+            = |(term, names)| Term::Project(2, term, names) }
     }
 }

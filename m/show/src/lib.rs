@@ -58,7 +58,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
                 f,
                 "{} with {}",
                 Show(term.as_ref()),
-                Show(ListEntry("=", &(path, val)))
+                Show(ListEntry("=", (path, val)))
             ),
             IfThenElse(c, a, b) => {
                 write!(
@@ -110,6 +110,18 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                 )
             }
             Text(n, entries) => write!(f, "{}", Show(SText(*n, entries))),
+            Project(style, term, names) => {
+                let list_style = match style {
+                    1 => SHOW_LIST_STYLE_PROJECTION,
+                    _ => SHOW_LIST_STYLE_SELECTION,
+                };
+                write!(
+                    f,
+                    "{}.{}",
+                    Show(term.as_ref()),
+                    Show(ShowList(list_style, names))
+                )
+            }
             o => panic!("How to show {:?}", o),
         }
     }
@@ -142,6 +154,8 @@ const SHOW_LIST_STYLE_REC: ShowListStyle = ShowListStyle("{", "}", "=", ",", tru
 const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",", true);
 const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", true);
 const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", true);
+const SHOW_LIST_STYLE_PROJECTION: ShowListStyle = ShowListStyle("{", "}", "", ",", true);
+const SHOW_LIST_STYLE_SELECTION: ShowListStyle = ShowListStyle("(", ")", "", ",", true);
 
 struct ShowList<'i, P>(ShowListStyle<'i>, &'i P);
 struct ListEntry<'i, E>(&'i str, E);
@@ -149,6 +163,13 @@ struct Path<T>(T);
 struct SText<'i>(u8, &'i ast::Deq<ast::TextEntry<'i>>);
 
 impl<'i> fmt::Display for Show<ListEntry<'i, &'i (ast::Path<'i>, Box<ast::Expr<'i>>)>> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ListEntry(assign, (name, expr)) = self.0;
+        write!(f, "{} {} {}", Show(Path(name)), assign, Show(expr.as_ref()))
+    }
+}
+
+impl<'i> fmt::Display for Show<ListEntry<'i, (&'i ast::Path<'i>, &'i Box<ast::Term1<'i>>)>> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ListEntry(assign, (name, expr)) = self.0;
         write!(f, "{} {} {}", Show(Path(name)), assign, Show(expr.as_ref()))
@@ -178,6 +199,13 @@ impl<'i> fmt::Display for Show<ListEntry<'i, &'i (&'i ast::Path<'i>, &'i ast::Va
         let ListEntry(assign, &(name, expr)) = self.0;
         let expr = expr.as_ref();
         write!(f, "{} {} {}", Show(Path(name)), assign, Show(expr))
+    }
+}
+
+impl<'i> fmt::Display for Show<ListEntry<'i, &'i ast::Ident<'i>>> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ListEntry(_, name) = self.0;
+        write!(f, "{}", name)
     }
 }
 

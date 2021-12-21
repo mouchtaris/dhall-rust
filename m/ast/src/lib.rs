@@ -32,7 +32,7 @@ pub enum Term1<'i> {
     Term(Term<'i>),
     Evaluation(Box<Term1<'i>>, Term<'i>),
     Arrow(Option<Ident<'i>>, Val<'i>, Val<'i>),
-    With(Box<Term1<'i>>, Path<'i>, Val<'i>),
+    With(Box<Term1<'i>>, Path<'i>, Box<Term1<'i>>),
     Operation(Box<Term1<'i>>, &'i str, Box<Term1<'i>>),
     IfThenElse(Val<'i>, Val<'i>, Val<'i>),
     Ascribe(Box<Term1<'i>>, Val<'i>),
@@ -43,6 +43,7 @@ pub enum Term1<'i> {
 pub enum Term<'i> {
     Integer(bool, &'i str),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
+    Project(u8, Box<Term<'i>>, Deq<Ident<'i>>),
     Path(TermPath<'i>),
     Var(Ident<'i>),
     Text(u8, Deq<TextEntry<'i>>),
