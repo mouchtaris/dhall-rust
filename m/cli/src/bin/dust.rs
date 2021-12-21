@@ -5,5 +5,6 @@ fn main() -> std::io::Result<()> {
     let mut lex = lex::Lex::new(&source);
     let prog = parse::dhall::ExprParser::new().parse(&mut lex).unwrap();
     println!("{}", show::Show(&prog));
+    log::debug!("{:#?}", prog);
     Ok(())
 }

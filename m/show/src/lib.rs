@@ -99,26 +99,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                 )
             }
             Negative(n) => write!(f, "({})", n),
-            Text(n, entries) => {
-                let mut first = true;
-                for (text, imbue) in entries {
-                    match (first, *text, imbue) {
-                        (true, "", Some(val)) => write!(f, "({})", Show(val.as_ref()))?,
-                        (true, txt, None) => write!(f, "{}", Show(SText(*n, txt)))?,
-                        (true, txt, Some(val)) => {
-                            write!(f, "{} ++ ({})", Show(SText(*n, txt)), Show(val.as_ref()))?
-                        }
-                        (false, "", None) => (),
-                        (false, "", Some(val)) => write!(f, "++ ({})", Show(val.as_ref()))?,
-                        (false, txt, None) => write!(f, "++ {}", Show(SText(*n, txt)))?,
-                        (false, txt, Some(val)) => {
-                            write!(f, "++ {} ++ ({})", Show(SText(*n, txt)), Show(val.as_ref()))?
-                        }
-                    }
-                    first = false;
-                }
-                Ok(())
-            }
+            Text(n, entries) => write!(f, "{}", Show(SText(*n, entries))),
             o => panic!("How to show {:?}", o),
         }
     }
@@ -155,7 +136,7 @@ const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", tru
 struct ShowList<'i, P>(ShowListStyle<'i>, &'i P);
 struct ListEntry<'i, E>(&'i str, E);
 struct Path<T>(T);
-struct SText<'i>(u8, &'i str);
+struct SText<'i>(u8, &'i ast::Deq<ast::TextEntry<'i>>);
 
 impl<'i> fmt::Display for Show<ListEntry<'i, &'i (ast::Path<'i>, Box<ast::Expr<'i>>)>> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -207,12 +188,26 @@ where
 
 impl<'i> fmt::Display for Show<SText<'i>> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let SText(style, text) = self.0;
+        let SText(style, entries) = self.0;
         let mark = match style {
             1 => "\"",
             _ => "''",
         };
-        write!(f, "{mark}{text}{mark}", mark = mark, text = text)
+
+        write!(f, "{}", mark)?;
+
+        for (text, imbue) in entries {
+            if !text.is_empty() {
+                write!(f, "{}", text)?;
+            }
+            if let Some(val) = imbue {
+                write!(f, "${{ {} }}", Show(val.as_ref()))?;
+            }
+        }
+
+        write!(f, "{}", mark)?;
+
+        Ok(())
     }
 }
 
