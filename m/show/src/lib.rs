@@ -132,11 +132,12 @@ where
     P: IntoIterator,
     Show<ListEntry<'i, P::Item>>: fmt::Display,
 {
-    let ShowListStyle(open, close, assign, sep, first_sep) = style;
+    let ShowListStyle(open, close, assign, sep, empty, first_sep) = style;
 
     write!(f, "{} ", open)?;
 
     let mut first = true;
+
     for entry in list {
         if !first || first_sep {
             write!(f, "{} ", sep)?;
@@ -144,18 +145,23 @@ where
         first = false;
         write!(f, "{} ", Show(ListEntry(assign, entry)))?;
     }
+
+    if first {
+        write!(f, "{} ", empty)?;
+    }
+
     write!(f, "{}", close)?;
     Ok(())
 }
 
 #[derive(Copy, Clone)]
-struct ShowListStyle<'s>(&'s str, &'s str, &'s str, &'s str, bool);
-const SHOW_LIST_STYLE_REC: ShowListStyle = ShowListStyle("{", "}", "=", ",", true);
-const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",", true);
-const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", true);
-const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", true);
-const SHOW_LIST_STYLE_PROJECTION: ShowListStyle = ShowListStyle("{", "}", "", ",", true);
-const SHOW_LIST_STYLE_SELECTION: ShowListStyle = ShowListStyle("(", ")", "", ",", true);
+struct ShowListStyle<'s>(&'s str, &'s str, &'s str, &'s str, &'s str, bool);
+const SHOW_LIST_STYLE_REC: ShowListStyle = ShowListStyle("{", "}", "=", ",", "=", true);
+const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",", "", true);
+const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", "", true);
+const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", "", true);
+const SHOW_LIST_STYLE_PROJECTION: ShowListStyle = ShowListStyle("{", "}", "", ",", "", true);
+const SHOW_LIST_STYLE_SELECTION: ShowListStyle = ShowListStyle("(", ")", "", ",", "", true);
 
 struct ShowList<'i, P>(ShowListStyle<'i>, &'i P);
 struct ListEntry<'i, E>(&'i str, E);
