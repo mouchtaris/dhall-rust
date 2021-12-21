@@ -53,7 +53,6 @@ pub Term1: Term1<'input> = {
   <Box<Term1>> <Term>                                       => Term1::Evaluation(<>),
   <Box<Term1>> "::" <Record>                                => Term1::Construct(<>),
   "merge" <Record> <Box<Term>>                              => Term1::Term(Term::Merge(<>)),
-  Uri Guard?                                                => Term1::Term(Term::Import(<>)),
 };
 
 pub Term: Term<'input> = {
@@ -71,6 +70,7 @@ pub Term: Term<'input> = {
   "\"" <TextEntryList<"\"">>                                => new::term::text((1, <>)),
   "''" <TextEntryList<"''">>                                => new::term::text((2, <>)),
   Record                                                    => new::term::record(<>),
+  Uri Guard?                                                => new::term::import((<>)),
 };
 
 pub Record: RecordData<'input> = {

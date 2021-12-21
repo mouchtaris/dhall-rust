@@ -60,14 +60,13 @@ pub mod new {
             = |(s, t)| Term::Text(s, t) }
 
         impl_report! {
-            integer -> Term 's
-                : &'s str
-                = |s: &'s str| {
-                        let is_neg = s.starts_with("-");
-                        let rest_n = if is_neg { 1 } else { 0 };
-                        let n = &s[rest_n..];
-                        Term::Integer(is_neg, n)
-                }
+        integer -> Term 's
+            : &'s str
+            = |s: &'s str| {
+                    let is_neg = s.starts_with("-");
+                    let rest_n = if is_neg { 1 } else { 0 };
+                    let n = &s[rest_n..];
+                    Term::Integer(is_neg, n) }
         }
 
         impl_report! {
@@ -79,6 +78,11 @@ pub mod new {
         select -> Term 's
             : (Box<Term<'s>>, Deq<Term1<'s>>)
             = |(term, names)| Term::Project(2, term, names) }
+
+        impl_report! {
+        import -> Term 's
+            : (&'s str, Option<(&'s str, Option<&'s str>)>)
+            = |(path, guard)| Term::Import(path, guard) }
 
         // fn select2<T: Analogous<(Term<'i>, Deq<Term1<'i>>)>>(t: T) -> Term<'i> {
         // }
