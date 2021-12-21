@@ -1,6 +1,6 @@
 // vim: et ts=2 sw=2
 // Bug with reporting one of those "self" as unused.
-use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident, new};
+use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident, new, RecordData};
 use super::Error;
 grammar<'input>;
 
@@ -54,17 +54,17 @@ pub Term1: Term1<'input> = {
 pub Term: Term<'input> = {
   Integer                                                   => new::term::integer(<>),
   Ident                                                     => new::term::var(<>),
-  <Box<Term>> "." <Ident>                                   => Term::FieldAccess(<>),
-  "[" "]"                                                   => Term::List(<_>::default()),
-  "[" <List2<",", Val>> "]"                                 => Term::List(<>),
-  "{" <List2<",", TypeRecordField>> "}"                     => Term::TypeRecord(<>),
-  "{" "}"                                                   => Term::TypeRecord(<_>::default()),
-  "<" <List2<"|", TypeEnumField>> ">"                       => Term::TypeEnum(<>),
-  "(" <Val> ")"                                             => Term::Expr(<>),
-  "\"" <TextEntryList<"\"">>                                => Term::Text(1, <>),
-  "''" <TextEntryList<"''">>                                => Term::Text(2, <>),
-  "{" "=" "}"                                               => Term::Record(<_>::default()),
-  Record                                                    => Term::Record(<>),
+  <Box<Term>> "." <Ident>                                   => new::term::field_access((<>)),
+  "[" "]"                                                   => new::term::list(Deq::<Val<'input>>::new()),
+  "[" <List2<",", Val>> "]"                                 => new::term::list(<>),
+  "{" "}"                                                   => new::term::type_record(RecordData::default()),
+  "{" <List2<",", TypeRecordField>> "}"                     => new::term::type_record(<>),
+  "<" <List2<"|", TypeEnumField>> ">"                       => new::term::type_enum(<>),
+  "(" <Val> ")"                                             => new::term::expr(<>),
+  "\"" <TextEntryList<"\"">>                                => new::term::text((1, <>)),
+  "''" <TextEntryList<"''">>                                => new::term::text((2, <>)),
+  "{" "=" "}"                                               => new::term::record(RecordData::default()),
+  Record                                                    => new::term::record(<>),
 };
 
 pub Record: ast::RecordData<'input> = {

@@ -17,6 +17,9 @@ pub type TextEntry<'i> = (&'i str, Option<Val<'i>>);
 pub type RecordEntry<'i> = (Path<'i>, Val<'i>);
 pub type RecordData<'i> = Deq<RecordEntry<'i>>;
 
+pub type TypeEnumEntry<'i> = (Ident<'i>, Option<Val<'i>>);
+pub type TypeEnumData<'i> = Deq<TypeEnumEntry<'i>>;
+
 #[derive(Debug)]
 pub enum Expr<'i> {
     Term1(Term1<'i>),
@@ -46,7 +49,7 @@ pub enum Term<'i> {
     List(Deq<Val<'i>>),
     Record(RecordData<'i>),
     TypeRecord(RecordData<'i>),
-    TypeEnum(Deq<(Ident<'i>, Option<Val<'i>>)>),
+    TypeEnum(TypeEnumData<'i>),
     Import(&'i str, Option<(&'i str, Option<&'i str>)>),
     Expr(Val<'i>),
     Merge(RecordData<'i>, Box<Term<'i>>),
@@ -178,13 +181,14 @@ pub mod new {
 
     pub mod term {
         use super::*;
+        impl_report! { integer -> Term 's : &'s str = |s: &'s str| Term::Integer(s.starts_with("-"), &s[1..]) }
         impl_report! { var -> Term 's : &'s str = |inp| Term::Var(inp) }
-        impl_report![field_access -> Term 's : (BTerm<'s>, Ident<'s>) = |(t, i)| Term::FieldAccess(t, i)];
-
-        pub fn integer(inp: &str) -> Term {
-            let t = Term::Integer(inp.starts_with("-"), &inp[1..]);
-            log::trace!("{:?}", t);
-            t
-        }
+        impl_report! { field_access -> Term 's : (BTerm<'s>, Ident<'s>) = |(t, i)| Term::FieldAccess(t, i) }
+        impl_report! { list -> Term 's : Deq<Val<'s>> = Term::List }
+        impl_report! { record -> Term 's : RecordData<'s> = Term::Record }
+        impl_report! { type_record -> Term 's : RecordData<'s> = Term::TypeRecord }
+        impl_report! { type_enum -> Term 's : TypeEnumData<'s> = Term::TypeEnum }
+        impl_report! { expr -> Term 's : Val<'s> = Term::Expr }
+        impl_report! { text -> Term 's : (u8, Deq<TextEntry<'s>>) = |(s, t)| Term::Text(s, t) }
     }
 }
