@@ -1,6 +1,6 @@
 pub const VERSION: &str = "0.0.1";
 
-use ast::{Deq, Ident, RecordData, Term, TextEntry, TypeEnumData, Val};
+use ast::{Deq, Ident, RecordData, Term, Term1, TextEntry, TypeEnumData, Val};
 
 pub mod new {
     use super::*;
@@ -72,12 +72,15 @@ pub mod new {
 
         impl_report! {
         project -> Term 's
-            : (Box<Term<'s>>, Deq<Ident<'s>>)
+            : (Box<Term<'s>>, Deq<Term1<'s>>)
             = |(term, names)| Term::Project(1, term, names) }
 
         impl_report! {
         select -> Term 's
-            : (Box<Term<'s>>, Deq<Ident<'s>>)
+            : (Box<Term<'s>>, Deq<Term1<'s>>)
             = |(term, names)| Term::Project(2, term, names) }
+
+        // fn select2<T: Analogous<(Term<'i>, Deq<Term1<'i>>)>>(t: T) -> Term<'i> {
+        // }
     }
 }

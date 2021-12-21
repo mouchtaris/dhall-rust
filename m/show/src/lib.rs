@@ -209,6 +209,13 @@ impl<'i> fmt::Display for Show<ListEntry<'i, &'i ast::Ident<'i>>> {
     }
 }
 
+impl<'i> fmt::Display for Show<ListEntry<'i, &'i ast::Term1<'i>>> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ListEntry(_, name) = self.0;
+        write!(f, "{}", Show(name))
+    }
+}
+
 impl<'i, P> fmt::Display for Show<Path<&'i P>>
 where
     &'i P: IntoIterator,

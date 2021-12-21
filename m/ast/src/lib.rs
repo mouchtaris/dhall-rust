@@ -43,7 +43,7 @@ pub enum Term1<'i> {
 pub enum Term<'i> {
     Integer(bool, &'i str),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
-    Project(u8, Box<Term<'i>>, Deq<Ident<'i>>),
+    Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
     Path(TermPath<'i>),
     Var(Ident<'i>),
     Text(u8, Deq<TextEntry<'i>>),
