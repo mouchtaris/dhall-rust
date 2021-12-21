@@ -69,6 +69,17 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
                     Show(b.as_ref()),
                 )
             }
+            Construct(term, data) => {
+                write!(
+                    f,
+                    "{}::{}",
+                    Show(term.as_ref()),
+                    Show(ShowList(SHOW_LIST_STYLE_REC, data))
+                )
+            }
+            FieldAccess(term, field) => {
+                write!(f, "{}.{}", Show(term.as_ref()), Show(field))
+            }
         }
     }
 }

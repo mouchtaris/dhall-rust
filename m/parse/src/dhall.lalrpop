@@ -4,7 +4,7 @@ use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident};
 use super::Error;
 grammar<'input>;
 
-pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\", "::", "." };
+pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\" };
 
 Some<T>: Option<T> = T => Some(<>);
 Box<T>: Box<T> = T => Box::new(<>);
@@ -54,6 +54,8 @@ pub Term1: Term1<'input> = {
   Term                                                      => Term1::Term(<>),
   <Box<Term1>> "with" <Path> "=" <Term>                     => Term1::With(<>),
   <Box<Term1>> <Term>                                       => Term1::Evaluation(<>),
+  <Box<Term1>> "." <Term>                                   => Term1::FieldAccess(<>),
+  <Box<Term1>> "::" <Record>                                => Term1::Construct(<>),
   Box<Term1> Op Term                                        => Term1::Operation(<>),
   "-" <Natural>                                             => Term1::Term(Term::Negative(<>)),
 };

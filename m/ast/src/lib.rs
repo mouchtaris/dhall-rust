@@ -33,6 +33,8 @@ pub enum Term1<'i> {
     Operation(Box<Term1<'i>>, &'i str, Term<'i>),
     IfThenElse(Val<'i>, Val<'i>, Val<'i>),
     Ascribe(Box<Term1<'i>>, Val<'i>),
+    Construct(Box<Term1<'i>>, RecordData<'i>),
+    FieldAccess(Box<Term1<'i>>, Term<'i>),
 }
 
 #[derive(Debug)]
