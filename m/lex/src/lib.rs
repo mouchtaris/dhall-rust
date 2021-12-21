@@ -170,14 +170,17 @@ fn parse_whitespace(inp: &str) -> R<'_> {
 }
 
 fn parse_natural(inp: &str) -> R<'_> {
-    let mut n = 0;
+    let mut n = 1;
     range_parse(
         inp,
         |s| Token::Integer(s),
-        |&(i, c)| if i == 0 && c == '-' {
-            n = 2 ;
-            true
-        } else { false } || c.is_ascii_digit(),
+        |&(i, c)|
+            if i == 0 && c == '-' {
+                n = 2;
+                true
+            } else {
+                false
+            } || c.is_ascii_digit(),
     )
         .and_then(longer_than(n))
 }
