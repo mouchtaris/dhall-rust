@@ -51,12 +51,12 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
                 Show(val.as_ref())
             ),
             Arrow(None, typ, val) => write!(f, "{} -> {}", Show(typ.as_ref()), Show(val.as_ref())),
-            Evaluation(func, t) => write!(f, "({} {})", Show(func.as_ref()), Show(t)),
+            Evaluation(func, t) => write!(f, "{} {}", Show(func.as_ref()), Show(t)),
             Operation(a, op, b) => write!(f, "{} {} {}", Show(a.as_ref()), op, Show(b)),
             Ascribe(term, typ) => write!(f, "{} : {}", Show(term.as_ref()), Show(typ.as_ref())),
             With(term, path, val) => write!(
                 f,
-                "({}) with {}",
+                "{} with {}",
                 Show(term.as_ref()),
                 Show(ListEntry("=", &(path, val)))
             ),
@@ -89,7 +89,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             TypeRecord(fields) => print_list(f, SHOW_LIST_STYLE_TYPEREC, fields),
             TypeEnum(fields) => print_list(f, SHOW_LIST_STYLE_TYPEENUM, fields),
             List(fields) => print_list(f, SHOW_LIST_STYLE_LIST, fields),
-            Expr(expr) => write!(f, "{}", Show(expr.as_ref())),
+            Expr(expr) => write!(f, "({})", Show(expr.as_ref())),
             Merge(term, val) => {
                 write!(
                     f,

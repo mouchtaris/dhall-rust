@@ -216,7 +216,7 @@ fn parse_sha256(inp: &str) -> R<'_> {
                 || (i == 4 && c == '5')
                 || (i == 5 && c == '6')
                 || (i == 6 && c == ':')
-                || (i >= 7 && i < (7 + 64))
+                || (i >= 7 && i < (7 + 64) && c.is_ascii_hexdigit())
         },
     )
     .and_then(longer_than(7 + 63))
