@@ -161,7 +161,7 @@ const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",",
 const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", "", true);
 const SHOW_LIST_STYLE_LIST: ShowListStyle = ShowListStyle("[", "]", "", ",", "", true);
 const SHOW_LIST_STYLE_PROJECTION: ShowListStyle = ShowListStyle("{", "}", "", ",", "", true);
-const SHOW_LIST_STYLE_SELECTION: ShowListStyle = ShowListStyle("(", ")", "", ",", "", true);
+const SHOW_LIST_STYLE_SELECTION: ShowListStyle = ShowListStyle("(", ")", "", ",", "", false);
 
 struct ShowList<'i, P>(ShowListStyle<'i>, &'i P);
 struct ListEntry<'i, E>(&'i str, E);
