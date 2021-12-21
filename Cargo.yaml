@@ -30,7 +30,8 @@ module:
       - ast
   ast:
     dep_mod: []
-    dep_crate: []
+    dep_crate:
+      - log
 crate:
   lalrpop-util: "0.19.6"
   regex: "1"

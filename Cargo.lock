@@ -23,6 +23,9 @@ dependencies = [
 [[package]]
 name = "ast"
 version = "0.0.1"
+dependencies = [
+ "log",
+]
 
 [[package]]
 name = "atty"

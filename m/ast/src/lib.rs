@@ -28,7 +28,7 @@ pub enum Expr<'i> {
 pub enum Term1<'i> {
     Term(Term<'i>),
     Evaluation(Box<Term1<'i>>, Term<'i>),
-    Arrow(Option<Ident<'i>>, Box<Term1<'i>>, Val<'i>),
+    Arrow(Option<Ident<'i>>, Val<'i>, Val<'i>),
     With(Box<Term1<'i>>, Path<'i>, Val<'i>),
     Operation(Box<Term1<'i>>, &'i str, Box<Term1<'i>>),
     IfThenElse(Val<'i>, Val<'i>, Val<'i>),
@@ -38,7 +38,7 @@ pub enum Term1<'i> {
 
 #[derive(Debug)]
 pub enum Term<'i> {
-    Natural(&'i str),
+    Integer(bool, &'i str),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Path(TermPath<'i>),
     Var(Ident<'i>),
@@ -55,7 +55,7 @@ pub enum Term<'i> {
 #[derive(Debug, Clone, Copy)]
 pub enum Token<'i> {
     Ident(&'i str),
-    Natural(&'i str),
+    Integer(&'i str),
     Text(&'i str),
     RelUri(&'i str),
     HttpUri(&'i str),
@@ -108,7 +108,7 @@ impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Natural(s) | Text(s)
+            Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Integer(s) | Text(s)
             | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s)
             | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
             | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s)
@@ -147,7 +147,7 @@ pub fn utf8len(c: char) -> usize {
 }
 
 pub fn const_0_term<'i>() -> Term<'i> {
-    Term::Natural("0")
+    Term::Integer(false, "0")
 }
 pub fn const_0_term1<'i>() -> Term1<'i> {
     Term1::Term(const_0_term())
@@ -159,4 +159,32 @@ pub fn const_0_expr<'i>() -> Expr<'i> {
 
 pub fn var_expr(s: &str) -> Expr {
     Expr::Term1(Term1::Term(Term::Var(s)))
+}
+
+pub mod new {
+    use super::*;
+
+    macro_rules! impl_report {
+        ($name:ident -> $t:ident $l:lifetime : $treq:ty = $m:expr) => {
+            pub fn $name<$l, T: Into<$treq>>(inp: T) -> $t<$l> {
+                let t = $m(inp.into());
+                log::trace!("{:?}", t);
+                t
+            }
+        };
+    }
+
+    pub type BTerm<'i> = Box<Term<'i>>;
+
+    pub mod term {
+        use super::*;
+        impl_report! { var -> Term 's : &'s str = |inp| Term::Var(inp) }
+        impl_report![field_access -> Term 's : (BTerm<'s>, Ident<'s>) = |(t, i)| Term::FieldAccess(t, i)];
+
+        pub fn integer(inp: &str) -> Term {
+            let t = Term::Integer(inp.starts_with("-"), &inp[1..]);
+            log::trace!("{:?}", t);
+            t
+        }
+    }
 }

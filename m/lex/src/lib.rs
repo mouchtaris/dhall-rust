@@ -35,6 +35,7 @@ impl<'s> Lex<'s> {
         let inp = self.src();
 
         parse_whitespace(inp)
+            .or_else(|| parse_natural(inp))
             .or_else(|| parse_block_comment(inp))
             .or_else(|| parse_line_comment1(inp))
             .or_else(|| parse_line_comment2(inp))
@@ -42,7 +43,6 @@ impl<'s> Lex<'s> {
             .or_else(|| parse_http_uri(inp))
             .or_else(|| parse_sha256(inp))
             .or_else(|| parse_punctuation(inp))
-            .or_else(|| parse_natural(inp))
             .or_else(|| parse_ident_or_keyword(inp))
     }
 
@@ -170,7 +170,11 @@ fn parse_whitespace(inp: &str) -> R<'_> {
 }
 
 fn parse_natural(inp: &str) -> R<'_> {
-    range_parse(inp, |s| Token::Natural(s), |(_, c)| c.is_ascii_digit())
+    range_parse(
+        inp,
+        |s| Token::Integer(s),
+        |&(i, c)| (i == 0 && c == '-') || c.is_ascii_digit(),
+    )
 }
 
 fn parse_rel_uri(inp: &str) -> R<'_> {

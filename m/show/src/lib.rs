@@ -86,7 +86,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
         let Self(obj) = self;
         use ast::Term::*;
         match obj {
-            Natural(s) => write!(f, "{}", s),
+            &Integer(neg, s) => write!(f, "{}{}", if *neg { "-" } else { "" }, s),
             Var(name) => write!(f, "{}", name),
             FieldAccess(term, field) => {
                 write!(f, "{}.{}", Show(term.as_ref()), field)
