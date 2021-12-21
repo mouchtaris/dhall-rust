@@ -15,10 +15,17 @@ module:
     dep_mod:
       - lex
       - ast
+      - actions
     dep_crate:
       - log
       - thiserror
       - lalrpop-util
+  actions:
+    dep_mod:
+      - ast
+    dep_crate:
+      - log
+      - thiserror
   lex:
     dep_mod:
       - ast
@@ -30,8 +37,7 @@ module:
       - ast
   ast:
     dep_mod: []
-    dep_crate:
-      - log
+    dep_crate: []
 crate:
   lalrpop-util: "0.19.6"
   regex: "1"

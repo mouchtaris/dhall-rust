@@ -1,11 +1,15 @@
 [workspace]
 members = [
+    'm/actions',
     'm/ast',
     'm/cli',
     'm/lex',
     'm/parse',
     'm/show',
 ]
+[patch.crates-io.actions]
+path = 'm/actions'
+
 [patch.crates-io.ast]
 path = 'm/ast'
 

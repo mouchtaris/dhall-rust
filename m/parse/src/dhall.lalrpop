@@ -1,6 +1,7 @@
 // vim: et ts=2 sw=2
 // Bug with reporting one of those "self" as unused.
-use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident, new, RecordData};
+use ast::{Expr, Term1, Term, Path, Deq, Token, Val, LetStmt, TextEntry, Ident, RecordData};
+use actions::new;
 use super::Error;
 grammar<'input>;
 
