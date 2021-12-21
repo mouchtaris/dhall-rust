@@ -52,7 +52,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
             ),
             Arrow(None, typ, val) => write!(f, "{} -> {}", Show(typ.as_ref()), Show(val.as_ref())),
             Evaluation(func, t) => write!(f, "{} {}", Show(func.as_ref()), Show(t)),
-            Operation(a, op, b) => write!(f, "{} {} {}", Show(a.as_ref()), op, Show(b)),
+            Operation(a, op, b) => write!(f, "{} {} {}", Show(a.as_ref()), op, Show(b.as_ref())),
             Ascribe(term, typ) => write!(f, "{} : {}", Show(term.as_ref()), Show(typ.as_ref())),
             With(term, path, val) => write!(
                 f,
@@ -77,9 +77,6 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
                     Show(ShowList(SHOW_LIST_STYLE_REC, data))
                 )
             }
-            FieldAccess(term, field) => {
-                write!(f, "{}.{}", Show(term.as_ref()), Show(field))
-            }
         }
     }
 }
@@ -91,6 +88,9 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
         match obj {
             Natural(s) => write!(f, "{}", s),
             Var(name) => write!(f, "{}", name),
+            FieldAccess(term, field) => {
+                write!(f, "{}.{}", Show(term.as_ref()), field)
+            }
             Import(path, Some((guard, Some(fallback)))) => {
                 write!(f, "{} {} ? {}", path, guard, fallback)
             }
@@ -109,7 +109,6 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                     Show(val.as_ref())
                 )
             }
-            Negative(n) => write!(f, "({})", n),
             Text(n, entries) => write!(f, "{}", Show(SText(*n, entries))),
             o => panic!("How to show {:?}", o),
         }
@@ -174,9 +173,10 @@ impl<'i> fmt::Display for Show<ListEntry<'i, &'i Box<ast::Expr<'i>>>> {
     }
 }
 
-impl<'i> fmt::Display for Show<ListEntry<'i, &'i (&'i ast::Path<'i>, &'i ast::Term<'i>)>> {
+impl<'i> fmt::Display for Show<ListEntry<'i, &'i (&'i ast::Path<'i>, &'i ast::Val<'i>)>> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ListEntry(assign, &(name, expr)) = self.0;
+        let expr = expr.as_ref();
         write!(f, "{} {} {}", Show(Path(name)), assign, Show(expr))
     }
 }

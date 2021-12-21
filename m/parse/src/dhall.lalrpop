@@ -28,41 +28,33 @@ pub Path: Path<'input> = List1<".", Ident>;
 φ = { "∀", "forall" }
 
 pub Expr: Expr<'input> = {
-  Term2                                               => Expr::Term1(<>),
-  <LetStmtList> "in" <Val>                            => Expr::Let(<>),
-  λ "(" <Ident> <(":" <Val>)?> ")" α <Val>            => Expr::Lambda(<>),
+  Term2                                                     => Expr::Term1(<>),
+  <LetStmtList> "in" <Val>                                  => Expr::Let(<>),
+  <Box<Term2>> ":" <Val>                                    => Expr::Term1(Term1::Ascribe(<>)),
+  <Box<Term1>> α <Val>                                      => Expr::Term1(Term1::Arrow(None, <>)),
+  φ "(" <Some<Ident>> ":" <Val> ")" α <Val>          => Expr::Term1(Term1::Arrow(<>)),
+  λ "(" <Ident> <(":" <Val>)?> ")" α <Val>                  => Expr::Lambda(<>),
+  "if" <Val> "then" <Val> "else" <Val>                      => Expr::Term1(Term1::IfThenElse(<>)),
+  <Box<Term1>> "with" <Path> "=" <Val>               => Expr::Term1(Term1::With(<>)),
 };
-
-pub LetStmtList: Deq<LetStmt<'input>> = {
-  LetStmt => ast::deq(<>),
-  <mut l: LetStmtList> <s: LetStmt> => { l.push_back(s); l },
-};
-
-pub LetStmt =
-  "let" <Ident> <(":" <Val>)?> "=" <Val>
-;
 
 pub Term2: Term1<'input> = {
-  <Box<Term1>> α <Box<Term2>>                               => Term1::Arrow(None, <>),
-  φ "(" <Some<Ident>> ":" <Box<Term2>> ")" α <Box<Term2>>   => Term1::Arrow(<>),
-  "if" <Val> "then" <Val> "else" <Val>                      => Term1::IfThenElse(<>),
-  <Box<Term1>> ":" <Val>                                    => Term1::Ascribe(<>),
+  <Box<Term2>> <Op> <Box<Term1>>                            => Term1::Operation(<>),
   Term1,
 };
 
 pub Term1: Term1<'input> = {
   Term                                                      => Term1::Term(<>),
-  <Box<Term1>> "with" <Path> "=" <Term>                     => Term1::With(<>),
   <Box<Term1>> <Term>                                       => Term1::Evaluation(<>),
-  <Box<Term1>> "." <Term>                                   => Term1::FieldAccess(<>),
   <Box<Term1>> "::" <Record>                                => Term1::Construct(<>),
-  Box<Term1> Op Term                                        => Term1::Operation(<>),
-  "-" <Natural>                                             => Term1::Term(Term::Negative(<>)),
+  "merge" <Record> <Box<Term>>                              => Term1::Term(Term::Merge(<>)),
+  Uri Guard?                                                => Term1::Term(Term::Import(<>)),
 };
 
 pub Term: Term<'input> = {
   Natural                                                   => Term::Natural(<>),
   Ident                                                     => Term::Var(<>),
+  <Box<Term>> "." <Ident>                                   => Term::FieldAccess(<>),
   "[" "]"                                                   => Term::List(<_>::default()),
   "[" <List2<",", Val>> "]"                                 => Term::List(<>),
   "{" <List2<",", TypeRecordField>> "}"                     => Term::TypeRecord(<>),
@@ -71,10 +63,8 @@ pub Term: Term<'input> = {
   "(" <Val> ")"                                             => Term::Expr(<>),
   "\"" <TextEntryList<"\"">>                                => Term::Text(1, <>),
   "''" <TextEntryList<"''">>                                => Term::Text(2, <>),
-  Uri Guard?                                                => Term::Import(<>),
   "{" "=" "}"                                               => Term::Record(<_>::default()),
   Record                                                    => Term::Record(<>),
-  "merge" <Record> <Box<Term>>                              => Term::Merge(<>),
 };
 
 pub Record: ast::RecordData<'input> = {
@@ -107,6 +97,15 @@ TextEntryList<END>: Deq<TextEntry<'input>> = {
     l
   },
 };
+
+pub LetStmtList: Deq<LetStmt<'input>> = {
+  LetStmt => ast::deq(<>),
+  <mut l: LetStmtList> <s: LetStmt> => { l.push_back(s); l },
+};
+
+pub LetStmt =
+  "let" <Ident> <(":" <Val>)?> "=" <Val>
+;
 
 extern {
   type Location = usize;

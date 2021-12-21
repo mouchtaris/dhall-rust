@@ -28,19 +28,18 @@ pub enum Expr<'i> {
 pub enum Term1<'i> {
     Term(Term<'i>),
     Evaluation(Box<Term1<'i>>, Term<'i>),
-    Arrow(Option<Ident<'i>>, Box<Term1<'i>>, Box<Term1<'i>>),
-    With(Box<Term1<'i>>, Path<'i>, Term<'i>),
-    Operation(Box<Term1<'i>>, &'i str, Term<'i>),
+    Arrow(Option<Ident<'i>>, Box<Term1<'i>>, Val<'i>),
+    With(Box<Term1<'i>>, Path<'i>, Val<'i>),
+    Operation(Box<Term1<'i>>, &'i str, Box<Term1<'i>>),
     IfThenElse(Val<'i>, Val<'i>, Val<'i>),
     Ascribe(Box<Term1<'i>>, Val<'i>),
     Construct(Box<Term1<'i>>, RecordData<'i>),
-    FieldAccess(Box<Term1<'i>>, Term<'i>),
 }
 
 #[derive(Debug)]
 pub enum Term<'i> {
     Natural(&'i str),
-    Negative(&'i str),
+    FieldAccess(Box<Term<'i>>, Ident<'i>),
     Path(TermPath<'i>),
     Var(Ident<'i>),
     Text(u8, Deq<TextEntry<'i>>),
