@@ -81,10 +81,10 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             Natural(s) => write!(f, "{}", s),
             Var(name) => write!(f, "{}", name),
             Import(path, Some((guard, Some(fallback)))) => {
-                write!(f, "({} {} ? {})", path, guard, fallback)
+                write!(f, "{} {} ? {}", path, guard, fallback)
             }
-            Import(path, Some((guard, None))) => write!(f, "({} {})", path, guard),
-            Import(path, None) => write!(f, "({})", path),
+            Import(path, Some((guard, None))) => write!(f, "{} {}", path, guard),
+            Import(path, None) => write!(f, "{}", path),
             Record(fields) => print_list(f, SHOW_LIST_STYLE_REC, fields),
             TypeRecord(fields) => print_list(f, SHOW_LIST_STYLE_TYPEREC, fields),
             TypeEnum(fields) => print_list(f, SHOW_LIST_STYLE_TYPEENUM, fields),
@@ -100,25 +100,23 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             }
             Negative(n) => write!(f, "({})", n),
             Text(n, entries) => {
-                write!(f, "(")?;
                 let mut first = true;
                 for (text, imbue) in entries {
                     match (first, *text, imbue) {
                         (true, "", Some(val)) => write!(f, "({})", Show(val.as_ref()))?,
                         (true, txt, None) => write!(f, "{}", Show(SText(*n, txt)))?,
                         (true, txt, Some(val)) => {
-                            write!(f, "{:?} ++ ({})", txt, Show(val.as_ref()))?
+                            write!(f, "{} ++ ({})", Show(SText(*n, txt)), Show(val.as_ref()))?
                         }
                         (false, "", None) => (),
                         (false, "", Some(val)) => write!(f, "++ ({})", Show(val.as_ref()))?,
-                        (false, txt, None) => write!(f, "++ {:?}", txt)?,
+                        (false, txt, None) => write!(f, "++ {}", Show(SText(*n, txt)))?,
                         (false, txt, Some(val)) => {
-                            write!(f, "++ {:?} ++ ({})", txt, Show(val.as_ref()))?
+                            write!(f, "++ {} ++ ({})", Show(SText(*n, txt)), Show(val.as_ref()))?
                         }
                     }
                     first = false;
                 }
-                write!(f, ")")?;
                 Ok(())
             }
             o => panic!("How to show {:?}", o),
@@ -133,7 +131,7 @@ where
 {
     let ShowListStyle(open, close, assign, sep, first_sep) = style;
 
-    write!(f, "{}", open)?;
+    write!(f, "{} ", open)?;
 
     let mut first = true;
     for entry in list {
@@ -141,7 +139,7 @@ where
             write!(f, "{} ", sep)?;
         }
         first = false;
-        write!(f, "{}", Show(ListEntry(assign, entry)))?;
+        write!(f, "{} ", Show(ListEntry(assign, entry)))?;
     }
     write!(f, "{}", close)?;
     Ok(())
