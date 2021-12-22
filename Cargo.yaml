@@ -17,6 +17,7 @@ module:
       - parse
       - ast
       - error
+      - show
     dep_crate:
       - log
   error:

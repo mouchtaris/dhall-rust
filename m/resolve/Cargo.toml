@@ -16,3 +16,7 @@ version = '>= 0.4.14'
 [dependencies.parse]
 version = '0.0.1'
 path = '../parse'
+
+[dependencies.show]
+version = '0.0.1'
+path = '../show'

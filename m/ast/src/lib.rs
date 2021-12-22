@@ -54,6 +54,7 @@ pub enum Term<'i> {
     Import(&'i str, Option<(&'i str, Option<&'i str>)>),
     Expr(Val<'i>),
     Merge(RecordData<'i>, Box<Term<'i>>),
+    Embed(String),
 }
 
 #[derive(Debug, Clone, Copy)]

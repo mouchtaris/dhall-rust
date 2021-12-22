@@ -24,7 +24,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[macro_export]
 macro_rules! bail {
     ($fmt:literal $(, $arg:expr)* $(,)?) => {
-        return Err(Error::any(format!($fmt $(, $arg)*)))
+        return Err($crate::Error::any(format!($fmt $(, $arg)*)))
     }
 }
 

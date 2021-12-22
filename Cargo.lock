@@ -469,6 +469,7 @@ dependencies = [
  "error",
  "log",
  "parse",
+ "show",
 ]
 
 [[package]]
