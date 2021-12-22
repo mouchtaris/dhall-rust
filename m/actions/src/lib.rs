@@ -63,11 +63,15 @@ pub mod new {
         integer -> Term 's
             : &'s str
             = |s: &'s str| {
-                    let is_neg = s.starts_with("-");
-                    let rest_n = if is_neg { 1 } else { 0 };
-                    let n = &s[rest_n..];
-                    Term::Integer(is_neg, n) }
-        }
+                let is_neg = s.starts_with("-");
+                let rest_n = if is_neg { 1 } else { 0 };
+                let n = &s[rest_n..];
+                Term::Integer(is_neg, n) } }
+
+        impl_report! {
+        double -> Term 's
+            : &'s str
+            = |s: &'s str| Term::Double(s) }
 
         impl_report! {
         project -> Term 's

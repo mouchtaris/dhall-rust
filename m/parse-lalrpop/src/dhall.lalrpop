@@ -57,6 +57,7 @@ pub Term1: Term1<'input> = {
 
 pub Term: Term<'input> = {
   Integer                                                   => new::term::integer(<>),
+  Double                                                    => new::term::double(<>),
   Ident                                                     => new::term::var(<>),
   <Box<Term>> "." <Ident>                                   => new::term::field_access((<>)),
   <Box<Term>> "." "{" <List2<",", Term1>> "}"               => new::term::project((<>)),
@@ -164,6 +165,7 @@ extern {
     "with"    => Token::With(<&'input str>),
     Text      => Token::Text(<&'input str>),
     Integer   => Token::Integer(<&'input str>),
+    Double    => Token::Double(<&'input str>),
     Ident     => Token::Ident(<&'input str>),
     RelUri    => Token::RelUri(<&'input str>),
     HttpUri   => Token::HttpUri(<&'input str>),

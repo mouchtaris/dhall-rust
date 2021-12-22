@@ -61,6 +61,7 @@ impl<'i> Resolve for ast::Term<'i> {
         use ast::Term::*;
         match self {
             Integer(_, _) => Ok(()),
+            Double(_) => Ok(()),
             FieldAccess(term, _) => term.resolve(r),
             Project(_, term, fields) => (term, fields).resolve(r),
             Path(_) => Ok(()),

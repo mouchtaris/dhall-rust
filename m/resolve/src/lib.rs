@@ -19,7 +19,6 @@ pub struct Reservoir {
     files: Map<String, String>,
     // iteration-state
     uris: Set<String>,
-    path: String,
 }
 
 impl Reservoir {
@@ -27,7 +26,6 @@ impl Reservoir {
         Self {
             uris: <_>::default(),
             fetched_uris: <_>::default(),
-            path: <_>::default(),
             files: <_>::default(),
             output_dir,
         }

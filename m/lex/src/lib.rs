@@ -35,7 +35,8 @@ impl<'s> Lex<'s> {
         let inp = self.src();
 
         parse_whitespace(inp)
-            .or_else(|| parse_natural(inp))
+            .or_else(|| parse_double(inp))
+            .or_else(|| parse_integer(inp))
             .or_else(|| parse_block_comment(inp))
             .or_else(|| parse_line_comment1(inp))
             .or_else(|| parse_line_comment2(inp))
@@ -169,7 +170,7 @@ fn parse_whitespace(inp: &str) -> R<'_> {
     range_parse(inp, |s| Token::Whitespace(s), |(_, c)| c.is_whitespace())
 }
 
-fn parse_natural(inp: &str) -> R<'_> {
+fn parse_integer(inp: &str) -> R<'_> {
     let mut n = 1;
     range_parse(
         inp,
@@ -319,6 +320,29 @@ fn parse_line_comment2(inp: &str) -> R<'_> {
                 _ => return None,
             };
             Some(1)
+        },
+    )
+    .and_then(longer_than(2))
+}
+
+fn parse_double(inp: &str) -> R<'_> {
+    let mut p = '_';
+    let mut q = '_';
+    scan_parse(
+        inp,
+        |s| Token::Double(s),
+        move |c| {
+            let n = match (q, p, c) {
+                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c == '.' => 1,
+                (_, p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                (_, p, c) if p.is_ascii_digit() && c == '.' => 1,
+                (_, _, c) if c.is_ascii_digit() => 1,
+                _ => return None,
+            };
+            q = p;
+            p = c;
+            Some(n)
         },
     )
     .and_then(longer_than(2))

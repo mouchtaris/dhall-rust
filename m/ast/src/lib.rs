@@ -42,6 +42,7 @@ pub enum Term1<'i> {
 #[derive(Debug)]
 pub enum Term<'i> {
     Integer(bool, &'i str),
+    Double(&'i str),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
     Path(TermPath<'i>),
@@ -61,6 +62,7 @@ pub enum Term<'i> {
 pub enum Token<'i> {
     Ident(&'i str),
     Integer(&'i str),
+    Double(&'i str),
     Text(&'i str),
     RelUri(&'i str),
     HttpUri(&'i str),
@@ -113,13 +115,14 @@ impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Integer(s) | Text(s)
-            | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s)
-            | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
-            | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s)
-            | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s)
-            | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
-            | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
+            Double(s) | Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Integer(s)
+            | Text(s) | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s)
+            | Lambda(s) | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s)
+            | Forall(s) | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s)
+            | LBrace(s) | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s)
+            | Comma(s) | Dot(s) | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s)
+            | Then(s) | Else(s) | TextImbue(s) | With(s) | Comment(s) | Empty(s)
+            | Whitespace(s) => s,
         }
     }
 }
@@ -144,6 +147,7 @@ impl<'s> Token<'s> {
         match self {
             Ident(_) => Ident(val),
             Integer(_) => Integer(val),
+            Double(_) => Double(val),
             Text(_) => Text(val),
             RelUri(_) => RelUri(val),
             HttpUri(_) => HttpUri(val),
