@@ -13,5 +13,9 @@ version = '0.19.6'
 version = '0.0.1'
 path = '../parse'
 
+[dependencies.parse-lalrpop]
+version = '0.0.1'
+path = '../parse-lalrpop'
+
 [dependencies.thiserror]
 version = '>= 1.0.30'

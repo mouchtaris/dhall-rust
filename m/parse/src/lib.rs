@@ -1,9 +1,20 @@
 pub const VERSION: &str = "0.0.1";
 
-#[macro_use]
-extern crate lalrpop_util;
+use std::io;
 
-lalrpop_mod!(pub dhall);
+pub use parse_lalrpop::{dhall, Error, ParseError, ParseErrorE, Result, ResultT};
 
-#[derive(Debug)]
-pub struct Error;
+pub fn parse_str(inp: &str) -> Result<ast::Expr> {
+    let mut lex = lex::Lex::new(inp);
+    dhall::ExprParser::new().parse(&mut lex)
+}
+
+pub fn parse_read<'i, R>(inp: &mut R, buf: &'i mut String) -> ResultT<'i, ast::Expr<'i>, io::Error>
+where
+    R: io::Read,
+{
+    inp.read_to_string(buf)?;
+    let ast = parse_str(buf)
+        .map_err(|err| err.map_error(|_| io::Error::new(io::ErrorKind::Other, "oh no!")))?;
+    Ok(ast)
+}

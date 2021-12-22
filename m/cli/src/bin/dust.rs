@@ -2,10 +2,10 @@ use error::Result;
 
 fn main() -> Result<()> {
     pretty_env_logger::init();
+
     let mut source = String::new();
-    std::io::Read::read_to_string(&mut std::io::stdin(), &mut source)?;
-    let mut lex = lex::Lex::new(&source);
-    let mut prog = parse::dhall::ExprParser::new().parse(&mut lex)?;
+    let mut inp = std::io::stdin();
+    let mut prog = parse::parse_read(&mut inp, &mut source)?;
     println!("{}", show::Show(&prog));
     // log::debug!("{:#?}", prog);
 

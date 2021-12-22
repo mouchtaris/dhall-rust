@@ -6,6 +6,7 @@ members = [
     'm/error',
     'm/lex',
     'm/parse',
+    'm/parse-lalrpop',
     'm/resolve',
     'm/show',
 ]
@@ -26,6 +27,9 @@ path = 'm/lex'
 
 [patch.crates-io.parse]
 path = 'm/parse'
+
+[patch.crates-io.parse-lalrpop]
+path = 'm/parse-lalrpop'
 
 [patch.crates-io.resolve]
 path = 'm/resolve'

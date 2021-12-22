@@ -1,5 +1,5 @@
 [package]
-name = 'parse'
+name = 'parse-lalrpop'
 version = '0.0.1'
 edition = '2018'
 [dependencies.actions]
@@ -10,13 +10,14 @@ path = '../actions'
 version = '0.0.1'
 path = '../ast'
 
+[dependencies.lalrpop-util]
+version = '0.19.6'
+
 [dependencies.lex]
 version = '0.0.1'
 path = '../lex'
 
 [dependencies.log]
 version = '>= 0.4.14'
-
-[dependencies.parse-lalrpop]
-version = '0.0.1'
-path = '../parse-lalrpop'
+[build-dependencies]
+lalrpop = "0.19.6"

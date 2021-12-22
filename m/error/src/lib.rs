@@ -10,7 +10,7 @@ pub enum Source {
         source: io::Error,
     },
     #[error("parse: {:?}", .0)]
-    Lalrpop(lalrpop_util::ParseError<usize, ast::Token<'static>, parse::Error>),
+    Lalrpop(parse::ParseError<'static>),
     #[error("{}", .0)]
     Any(String),
 }
@@ -48,9 +48,9 @@ where
     }
 }
 
-impl<'i> From<lalrpop_util::ParseError<usize, ast::Token<'i>, parse::Error>> for Error {
-    fn from(e: lalrpop_util::ParseError<usize, ast::Token<'i>, parse::Error>) -> Self {
-        let e = e.map_token(|t| t.set_val(""));
+impl<'i, E> From<parse::ParseErrorE<'i, E>> for Error {
+    fn from(e: parse::ParseErrorE<'i, E>) -> Self {
+        let e = e.map_token(|t| t.set_val("")).map_error(|_| parse::Error);
         Self::new(Source::Lalrpop(e))
     }
 }

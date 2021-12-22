@@ -23,10 +23,19 @@ module:
     dep_mod:
       - ast
       - parse
+      - parse-lalrpop
     dep_crate:
       - thiserror
       - lalrpop-util
   parse:
+    dep_mod:
+      - lex
+      - ast
+      - actions
+      - parse-lalrpop
+    dep_crate:
+      - log
+  parse-lalrpop:
     dep_mod:
       - lex
       - ast

@@ -157,6 +157,7 @@ dependencies = [
  "ast",
  "lalrpop-util",
  "parse",
+ "parse-lalrpop",
  "thiserror",
 ]
 
@@ -338,6 +339,17 @@ dependencies = [
 
 [[package]]
 name = "parse"
+version = "0.0.1"
+dependencies = [
+ "actions",
+ "ast",
+ "lex",
+ "log",
+ "parse-lalrpop",
+]
+
+[[package]]
+name = "parse-lalrpop"
 version = "0.0.1"
 dependencies = [
  "actions",
