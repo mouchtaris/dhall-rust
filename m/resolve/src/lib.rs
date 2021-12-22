@@ -1,118 +1,80 @@
 pub const VERSION: &str = "0.0.1";
 
 use error::Result;
+mod resolve;
+
+use resolve::Resolve;
 
 #[derive(Default)]
 pub struct Reservoir {
     pub uris: ast::Deq<String>,
+    pub path: ast::Deq<String>,
+    pub output_dir: String,
 }
 
 impl Reservoir {
+    pub fn new(output_dir: String) -> Self {
+        Self {
+            uris: <_>::default(),
+            path: <_>::default(),
+            output_dir,
+        }
+    }
+
+    pub fn resolve_from<P>(&mut self, path: P, mut tree: ast::Expr) -> Result<()>
+    where
+        P: Into<String>,
+    {
+        self.path.push_back(path.into());
+        tree.resolve(self)?;
+        self.fetch_http()?;
+        Ok(())
+    }
+
     pub fn register<P: Into<String>>(&mut self, path: P) {
         self.uris.push_back(path.into());
     }
-}
 
-pub trait Resolve {
-    fn resolve(&mut self, reservoir: &mut Reservoir) -> Result<()>;
-}
+    fn fetch_http(&mut self) -> Result<()> {
+        use std::process::{Command, Stdio};
 
-impl<'i> Resolve for ast::Expr<'i> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        use ast::Expr::*;
-        match self {
-            Term1(t1) => t1.resolve(r),
-            Let(defs, val) => (defs, val).resolve(r),
-            Lambda(_, typ, val) => (typ, val).resolve(r),
+        let mut cmd = Command::new("curl");
+
+        cmd.stdin(Stdio::piped());
+
+        let opts = [
+            "--no-progress-meter",
+            "--create-dirs",
+            "--output-dir",
+            &self.output_dir,
+        ];
+        let args = || {
+            opts.iter().cloned().map(String::from).chain(
+                self.uris
+                    .iter()
+                    .filter_map(|s| {
+                        if s.starts_with("http") {
+                            Some(vec![s.clone(), format!("--output"), s.clone()])
+                        } else {
+                            None
+                        }
+                    })
+                    .flatten(),
+            )
+        };
+
+        log::debug!("Curling: {:?}", args().collect::<Vec<_>>());
+        cmd.args(args());
+
+        let mut proc = cmd.spawn()?;
+        let status = proc.wait()?;
+
+        if !status.success() {
+            return Err(format!("curl failed: {:?}", status).into());
         }
-    }
-}
 
-impl<'i> Resolve for ast::Term1<'i> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        use ast::Term1::*;
-        match self {
-            Term(t) => t.resolve(r),
-            Evaluation(f, x) => (f, x).resolve(r),
-            Arrow(_, a, b) => (a, b).resolve(r),
-            With(t, _, v) => (t, v).resolve(r),
-            Operation(a, _, b) => (a, b).resolve(r),
-            IfThenElse(c, a, b) => (c, a, b).resolve(r),
-            Ascribe(t, v) => (t, v).resolve(r),
-            Construct(t, d) => (t, d).resolve(r),
-        }
-    }
-}
+        log::info!("Curled {} files into {}", (args().count() - 4) / 3, &self.output_dir);
 
-impl<'i> Resolve for ast::Term<'i> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        use ast::Term::*;
-        match self {
-            Integer(_, _) => Ok(()),
-            FieldAccess(term, _) => term.resolve(r),
-            Project(_, term, fields) => (term, fields).resolve(r),
-            Path(_) => Ok(()),
-            Var(_) => Ok(()),
-            Text(_, ts) => ts.resolve(r),
-            List(vs) => vs.resolve(r),
-            TypeRecord(es) | Record(es) => es.resolve(r),
-            TypeEnum(es) => es.resolve(r),
-            Import(path, _) => Ok(r.register(*path)),
-            Expr(e) => e.resolve(r),
-            Merge(d, t) => (d, t).resolve(r),
-        }
-    }
-}
-
-impl<T: Resolve> Resolve for Option<T> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        if let Some(t) = self {
-            t.resolve(r)?;
-        }
-        Ok(())
-    }
-}
-
-impl<T: Resolve> Resolve for Box<T> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        self.as_mut().resolve(r)
-    }
-}
-
-impl<A: Resolve, B: Resolve> Resolve for (A, B) {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        let (a, b) = self;
-        a.resolve(r)?;
-        b.resolve(r)
-    }
-}
-
-impl<A: Resolve, B: Resolve, C: Resolve> Resolve for (A, B, C) {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        let (a, b, c) = self;
-        a.resolve(r)?;
-        b.resolve(r)?;
-        c.resolve(r)
-    }
-}
-
-impl<T: Resolve> Resolve for ast::Deq<T> {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        for t in self {
-            t.resolve(r)?;
-        }
-        Ok(())
-    }
-}
-
-impl<'a, T: Resolve> Resolve for &'a mut T {
-    fn resolve(&mut self, r: &mut Reservoir) -> Result<()> {
-        T::resolve(self, r)
-    }
-}
-
-impl<'a> Resolve for &'a str {
-    fn resolve(&mut self, _: &mut Reservoir) -> Result<()> {
         Ok(())
     }
 }

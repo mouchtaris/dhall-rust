@@ -1,14 +1,13 @@
 pub const VERSION: &str = "0.0.1";
 
-use std::{io, result};
+use std::{env, io, result};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Source {
-    #[error("io: {:?}", .source)]
-    Io {
-        #[from]
-        source: io::Error,
-    },
+    #[error("io: {:?}", .0)]
+    Io(#[from] io::Error),
+    #[error("env var: {:?}", .0)]
+    Var(#[from] env::VarError),
     #[error("parse: {:?}", .0)]
     Lalrpop(parse::ParseError<'static>),
     #[error("{}", .0)]
@@ -52,5 +51,11 @@ impl<'i, E> From<parse::ParseErrorE<'i, E>> for Error {
     fn from(e: parse::ParseErrorE<'i, E>) -> Self {
         let e = e.map_token(|t| t.set_val("")).map_error(|_| parse::Error);
         Self::new(Source::Lalrpop(e))
+    }
+}
+
+impl From<String> for Error {
+    fn from(e: String) -> Self {
+        Self::new(Source::Any(e))
     }
 }
