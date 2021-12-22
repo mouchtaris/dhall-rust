@@ -137,6 +137,60 @@ impl<'s> Token<'s> {
             _ => false,
         }
     }
+
+    pub fn set_val<'u>(&self, val: &'u str) -> Token<'u> {
+        use Token::*;
+        match self {
+            Ident(_) => Ident(val),
+            Integer(_) => Integer(val),
+            Text(_) => Text(val),
+            RelUri(_) => RelUri(val),
+            HttpUri(_) => HttpUri(val),
+            Sha256(_) => Sha256(val),
+            Conj1(_) => Conj1(val),
+            Conj2(_) => Conj2(val),
+            Alt(_) => Alt(val),
+            Lambda(_) => Lambda(val),
+            Arrow(_) => Arrow(val),
+            Equals(_) => Equals(val),
+            Let(_) => Let(val),
+            In(_) => In(val),
+            LPar(_) => LPar(val),
+            RPar(_) => RPar(val),
+            Colon(_) => Colon(val),
+            DColon(_) => DColon(val),
+            Forall(_) => Forall(val),
+            TextConcat(_) => TextConcat(val),
+            ListConcat(_) => ListConcat(val),
+            Plus(_) => Plus(val),
+            Div(_) => Div(val),
+            Star(_) => Star(val),
+            Minus(_) => Minus(val),
+            LBrace(_) => LBrace(val),
+            RBrace(_) => RBrace(val),
+            LBracket(_) => LBracket(val),
+            RBracket(_) => RBracket(val),
+            LAngle(_) => LAngle(val),
+            RAngle(_) => RAngle(val),
+            Comma(_) => Comma(val),
+            Dot(_) => Dot(val),
+            Pipe(_) => Pipe(val),
+            DDQuote(_) => DDQuote(val),
+            DQuote(_) => DQuote(val),
+            SQuote(_) => SQuote(val),
+            Questionmark(_) => Questionmark(val),
+            If(_) => If(val),
+            Then(_) => Then(val),
+            Else(_) => Else(val),
+            TextImbue(_) => TextImbue(val),
+            With(_) => With(val),
+            Comment(_) => Comment(val),
+            Empty(_) => Empty(val),
+            Whitespace(_) => Whitespace(val),
+            RawText(_) => RawText(val),
+            Merge(_) => Merge(val),
+        }
+    }
 }
 
 pub fn deq<T>(t: T) -> Deq<T> {

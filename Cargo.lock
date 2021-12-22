@@ -8,7 +8,6 @@ version = "0.0.1"
 dependencies = [
  "ast",
  "log",
- "thiserror",
 ]
 
 [[package]]
@@ -81,12 +80,13 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "cli"
 version = "0.0.1"
 dependencies = [
+ "error",
  "lex",
  "log",
  "parse",
  "pretty_env_logger",
+ "resolve",
  "show",
- "thiserror",
 ]
 
 [[package]]
@@ -148,6 +148,16 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
+]
+
+[[package]]
+name = "error"
+version = "0.0.1"
+dependencies = [
+ "ast",
+ "lalrpop-util",
+ "parse",
+ "thiserror",
 ]
 
 [[package]]
@@ -263,7 +273,6 @@ version = "0.0.1"
 dependencies = [
  "ast",
  "log",
- "thiserror",
 ]
 
 [[package]]
@@ -337,7 +346,6 @@ dependencies = [
  "lalrpop-util",
  "lex",
  "log",
- "thiserror",
 ]
 
 [[package]]
@@ -440,6 +448,16 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+
+[[package]]
+name = "resolve"
+version = "0.0.1"
+dependencies = [
+ "ast",
+ "error",
+ "log",
+ "parse",
+]
 
 [[package]]
 name = "rustversion"

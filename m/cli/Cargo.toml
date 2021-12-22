@@ -2,6 +2,10 @@
 name = 'cli'
 version = '0.0.1'
 edition = '2018'
+[dependencies.error]
+version = '0.0.1'
+path = '../error'
+
 [dependencies.lex]
 version = '0.0.1'
 path = '../lex'
@@ -16,9 +20,10 @@ path = '../parse'
 [dependencies.pretty_env_logger]
 version = '>= 0.4.0'
 
+[dependencies.resolve]
+version = '0.0.1'
+path = '../resolve'
+
 [dependencies.show]
 version = '0.0.1'
 path = '../show'
-
-[dependencies.thiserror]
-version = '>= 1.0.30'

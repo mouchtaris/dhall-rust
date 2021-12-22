@@ -1,0 +1,17 @@
+[package]
+name = 'error'
+version = '0.0.1'
+edition = '2018'
+[dependencies.ast]
+version = '0.0.1'
+path = '../ast'
+
+[dependencies.lalrpop-util]
+version = '0.19.6'
+
+[dependencies.parse]
+version = '0.0.1'
+path = '../parse'
+
+[dependencies.thiserror]
+version = '>= 1.0.30'

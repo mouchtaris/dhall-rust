@@ -1,10 +1,18 @@
 [package]
-name = 'actions'
+name = 'resolve'
 version = '0.0.1'
 edition = '2018'
 [dependencies.ast]
 version = '0.0.1'
 path = '../ast'
 
+[dependencies.error]
+version = '0.0.1'
+path = '../error'
+
 [dependencies.log]
 version = '>= 0.4.14'
+
+[dependencies.parse]
+version = '0.0.1'
+path = '../parse'

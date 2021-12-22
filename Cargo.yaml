@@ -7,10 +7,25 @@ module:
       - parse
       - lex
       - show
+      - resolve
+      - error
     dep_crate:
       - log
-      - thiserror
       - pretty_env_logger
+  resolve:
+    dep_mod:
+      - parse
+      - ast
+      - error
+    dep_crate:
+      - log
+  error:
+    dep_mod:
+      - ast
+      - parse
+    dep_crate:
+      - thiserror
+      - lalrpop-util
   parse:
     dep_mod:
       - lex
@@ -18,26 +33,21 @@ module:
       - actions
     dep_crate:
       - log
-      - thiserror
       - lalrpop-util
   actions:
     dep_mod:
       - ast
     dep_crate:
       - log
-      - thiserror
   lex:
     dep_mod:
       - ast
     dep_crate:
       - log
-      - thiserror
   show:
     dep_mod:
       - ast
-  ast:
-    dep_mod: []
-    dep_crate: []
+  ast: {}
 crate:
   lalrpop-util: "0.19.6"
   regex: "1"

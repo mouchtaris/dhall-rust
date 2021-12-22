@@ -3,8 +3,10 @@ members = [
     'm/actions',
     'm/ast',
     'm/cli',
+    'm/error',
     'm/lex',
     'm/parse',
+    'm/resolve',
     'm/show',
 ]
 [patch.crates-io.actions]
@@ -16,11 +18,17 @@ path = 'm/ast'
 [patch.crates-io.cli]
 path = 'm/cli'
 
+[patch.crates-io.error]
+path = 'm/error'
+
 [patch.crates-io.lex]
 path = 'm/lex'
 
 [patch.crates-io.parse]
 path = 'm/parse'
+
+[patch.crates-io.resolve]
+path = 'm/resolve'
 
 [patch.crates-io.show]
 path = 'm/show'
