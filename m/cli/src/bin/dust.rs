@@ -7,13 +7,15 @@ fn main() -> Result<()> {
     let mut lex = lex::Lex::new(&source);
     let mut prog = parse::dhall::ExprParser::new().parse(&mut lex)?;
     println!("{}", show::Show(&prog));
-    log::debug!("{:#?}", prog);
+    // log::debug!("{:#?}", prog);
 
     {
         use resolve::Resolve;
 
         let mut r = resolve::Reservoir::default();
         prog.resolve(&mut r)?;
+
+        log::debug!("Discovered Uris:\n{:#?}", r.uris);
     }
 
     Ok(())

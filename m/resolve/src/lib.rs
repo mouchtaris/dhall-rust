@@ -1,9 +1,17 @@
 pub const VERSION: &str = "0.0.1";
 
-use error::{bail, Error, Result};
+use error::Result;
 
 #[derive(Default)]
-pub struct Reservoir {}
+pub struct Reservoir {
+    pub uris: ast::Deq<String>,
+}
+
+impl Reservoir {
+    pub fn register<P: Into<String>>(&mut self, path: P) {
+        self.uris.push_back(path.into());
+    }
+}
 
 pub trait Resolve {
     fn resolve(&mut self, reservoir: &mut Reservoir) -> Result<()>;
@@ -26,8 +34,12 @@ impl<'i> Resolve for ast::Term1<'i> {
         match self {
             Term(t) => t.resolve(r),
             Evaluation(f, x) => (f, x).resolve(r),
+            Arrow(_, a, b) => (a, b).resolve(r),
+            With(t, _, v) => (t, v).resolve(r),
             Operation(a, _, b) => (a, b).resolve(r),
-            o => bail!("How to resolve term1 {:?}", o),
+            IfThenElse(c, a, b) => (c, a, b).resolve(r),
+            Ascribe(t, v) => (t, v).resolve(r),
+            Construct(t, d) => (t, d).resolve(r),
         }
     }
 }
@@ -37,10 +49,17 @@ impl<'i> Resolve for ast::Term<'i> {
         use ast::Term::*;
         match self {
             Integer(_, _) => Ok(()),
-            Var(_) => Ok(()),
             FieldAccess(term, _) => term.resolve(r),
             Project(_, term, fields) => (term, fields).resolve(r),
-            o => bail!("How to resolve term {:?}", o),
+            Path(_) => Ok(()),
+            Var(_) => Ok(()),
+            Text(_, ts) => ts.resolve(r),
+            List(vs) => vs.resolve(r),
+            TypeRecord(es) | Record(es) => es.resolve(r),
+            TypeEnum(es) => es.resolve(r),
+            Import(path, _) => Ok(r.register(*path)),
+            Expr(e) => e.resolve(r),
+            Merge(d, t) => (d, t).resolve(r),
         }
     }
 }
