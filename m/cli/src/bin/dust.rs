@@ -20,11 +20,11 @@ fn main() -> Result<()> {
         match arg.as_str() {
             "--show" => opt_show = true,
             "--no_show" => opt_show = false,
-            "--dbg_show_ast" => {
+            "--ast" => {
                 opt_show = false;
                 opt_dbg_show_ast = true;
             }
-            "--dbg_list_files" => {
+            "--files" => {
                 opt_show = false;
                 opt_dbg_list_files = true;
             }
@@ -44,8 +44,8 @@ fn main() -> Result<()> {
             "  --[no_]fetch       false                   Download http imports to ~/.cache/dust (requires resolve)",
             "  --[no_]show        !(resolve || fetch)     Show dhall.",
             "  --help             false                   Show help and exit.",
-            "  --dbg_show_ast     false                   Show the dhall AST. Turns show off.",
-            "  --dbg_list_files   false                   Show the loaded files. Turns show off.",
+            "  --ast              false                   Show the dhall AST. Turns show off.",
+            "  --files            false                   Show the loaded files. Turns show off.",
         ];
         helps.iter().for_each(|s| eprintln!("{}", s));
         return Ok(());
@@ -55,25 +55,23 @@ fn main() -> Result<()> {
 
     if opt_dbg_list_files {
         eprintln!("Files:");
-        for (f, _) in &r.files {
-            eprintln!("- {}", f);
+        for (f, (o, _)) in r.files() {
+            eprintln!("- {} {}", o, f);
         }
     }
 
-    let source = if opt_show || opt_dbg_show_ast {
-        r.files.get(&opt_input_file_path)
-    } else {
-        None
-    };
-
-    if let Some(source) = source {
-        let ast = parse::parse_str(source)?;
-
-        if opt_show {
-            println!("{}", show::Show(&ast));
-        }
-        if opt_dbg_show_ast {
-            eprintln!("{:#?}", &ast);
+    if opt_show || opt_dbg_show_ast {
+        if r.enable_resolve {
+            println!("{}", resolve::Importer(&mut r));
+            println!("in `{}`", &opt_input_file_path);
+        } else if let Some(source) = r.file(&opt_input_file_path) {
+            let ast = parse::parse_str(source)?;
+            if opt_show {
+                println!("{}", show::Show(&ast));
+            }
+            if opt_dbg_show_ast {
+                eprintln!("{:#?}", &ast);
+            }
         }
     }
 

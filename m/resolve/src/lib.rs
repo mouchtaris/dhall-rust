@@ -3,8 +3,10 @@ pub const VERSION: &str = "0.0.1";
 use {
     error::Result,
     std::{
+        borrow::Borrow,
         collections::{hash_map::HashMap as Map, hash_set::HashSet as Set},
-        fs,
+        fmt, fs,
+        hash::Hash,
     },
 };
 
@@ -17,7 +19,7 @@ pub struct Reservoir {
     pub enable_resolve: bool,
     pub enable_fetch: bool,
     // across-state
-    pub files: Map<String, String>,
+    files: Map<String, (usize, String)>,
     pub fetched_uris: Set<String>,
     // iteration-state
     uris: Set<String>,
@@ -33,6 +35,20 @@ impl Reservoir {
             enable_fetch: false,
             output_dir,
         }
+    }
+
+    pub fn files(&self) -> Vec<(&String, &(usize, String))> {
+        let mut r: Vec<_> = self.files.iter().collect();
+        r.sort_by_key(|&(_, &(o, _))| o);
+        r
+    }
+
+    pub fn file<Q>(&self, id: &Q) -> Option<&str>
+    where
+        String: Borrow<Q>,
+        Q: Hash + Eq,
+    {
+        self.files.get(id).map(|(_, s)| s.as_str())
     }
 
     pub fn import_file<P: AsRef<str>>(&mut self, path: P) -> Result<()> {
@@ -54,7 +70,7 @@ impl Reservoir {
         read_buffer.clear();
         let mut ast = parse::parse_read(&mut file, &mut read_buffer)?;
 
-        if self.enable_resolve {
+        let tree = if self.enable_resolve {
             self.uris.clear();
             let base_path = path;
             let mut path = String::new();
@@ -77,19 +93,26 @@ impl Reservoir {
                 self.fetch_http()?;
             }
 
-            ast.visit_import(|p, _| {
+            ast.visit_import(|p, t| {
                 path.push_str(p);
                 path_resolve(&base_path, &mut path);
                 log::trace!("[import] resolved as {}", path);
 
                 self.import_file(path.clone())?;
 
+                *t = ast::Term::Embed(format!("`{}`", path));
+
                 path.clear();
                 Ok(())
             })?;
-        }
 
-        self.files.insert(path.to_owned(), read_buffer);
+            format!("{}", show::Show(&ast))
+        } else {
+            read_buffer
+        };
+
+        let order = self.files.len();
+        self.files.insert(path.to_owned(), (order, tree));
         Ok(())
     }
 
@@ -201,5 +224,16 @@ fn path_clean(path: &mut String) {
         } else {
             break;
         }
+    }
+}
+
+pub struct Importer<'r>(pub &'r mut Reservoir);
+impl<'r> fmt::Display for Importer<'r> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let Self(r) = self;
+        for (path, (_, code)) in r.files() {
+            writeln!(f, "let `{}` = {}", path, code)?;
+        }
+        Ok(())
     }
 }
