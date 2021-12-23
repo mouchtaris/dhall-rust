@@ -109,20 +109,23 @@ pub enum Token<'i> {
     Whitespace(&'i str),
     RawText(&'i str),
     Merge(&'i str),
+    Equiv(&'i str),
+    LogicConj(&'i str),
+    LogicDisj(&'i str),
 }
 
 impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            Double(s) | Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s) | Integer(s)
-            | Text(s) | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s)
-            | Lambda(s) | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s)
-            | Forall(s) | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s)
-            | LBrace(s) | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s)
-            | Comma(s) | Dot(s) | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s)
-            | Then(s) | Else(s) | TextImbue(s) | With(s) | Comment(s) | Empty(s)
-            | Whitespace(s) => s,
+            LogicConj(s) | LogicDisj(s) | Equiv(s) | Double(s) | Merge(s) | DDQuote(s)
+            | DColon(s) | RawText(s) | Ident(s) | Integer(s) | Text(s) | RelUri(s) | HttpUri(s)
+            | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
+            | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
+            | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
+            | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
+            | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
+            | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
         }
     }
 }
@@ -194,6 +197,9 @@ impl<'s> Token<'s> {
             Whitespace(_) => Whitespace(val),
             RawText(_) => RawText(val),
             Merge(_) => Merge(val),
+            Equiv(_) => Equiv(val),
+            LogicConj(_) => LogicConj(val),
+            LogicDisj(_) => LogicDisj(val),
         }
     }
 }

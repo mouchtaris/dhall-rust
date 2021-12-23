@@ -5,7 +5,7 @@ use actions::new;
 use super::Error;
 grammar<'input>;
 
-pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\" };
+pub Op = { "+", "-", "/", "*", "++", "#", "//", "/\\", "//\\\\", "≡", "&&", "||" };
 
 Some<T>: Option<T> = T => Some(<>);
 Box<T>: Box<T> = T => Box::new(<>);
@@ -155,9 +155,12 @@ extern {
     "\""      => Token::DQuote(<&'input str>),
     "'"       => Token::SQuote(<&'input str>),
     "?"       => Token::Questionmark(<&'input str>),
+    "≡"       => Token::Equiv(<&'input str>),
     "::"      => Token::DColon(<&'input str>),
     "''"      => Token::DDQuote(<&'input str>),
     "${"      => Token::TextImbue(<&'input str>),
+    "&&"      => Token::LogicConj(<&'input str>),
+    "||"      => Token::LogicDisj(<&'input str>),
     "if"      => Token::If(<&'input str>),
     "then"    => Token::Then(<&'input str>),
     "else"    => Token::Else(<&'input str>),
