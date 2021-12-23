@@ -157,6 +157,21 @@ impl<'s> Token<'s> {
         }
     }
 
+    pub fn is_keyword(&self) -> bool {
+        match self {
+            Token::Let(_)
+            | Token::In(_)
+            | Token::With(_)
+            | Token::If(_)
+            | Token::Then(_)
+            | Token::Else(_)
+            | Token::Merge(_)
+            | Token::Missing(_)
+            | Token::As(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn set_val<'u>(&self, val: &'u str) -> Token<'u> {
         use Token::*;
         match self {

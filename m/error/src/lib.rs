@@ -16,7 +16,7 @@ pub enum Source {
 
 #[derive(Debug)]
 pub struct Error {
-    source: Source,
+    pub source: Source,
 }
 
 pub type Result<T> = result::Result<T, Error>;

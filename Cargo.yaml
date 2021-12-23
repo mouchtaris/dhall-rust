@@ -49,14 +49,15 @@ module:
       - ast
     dep_crate:
       - log
+  show:
+    dep_mod:
+      - lex
+      - ast
   lex:
     dep_mod:
       - ast
     dep_crate:
       - log
-  show:
-    dep_mod:
-      - ast
   ast: {}
 crate:
   lalrpop-util: "0.19.6"

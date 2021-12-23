@@ -88,8 +88,13 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
         match obj {
             &Integer(neg, s) => write!(f, "{}{}", if *neg { "-" } else { "" }, s),
             Embed(code) => writeln!(f, "{}", code),
-            Var(name, "0") => write!(f, "{}", name),
-            Var(name, n) => write!(f, "{}@{}", name, n),
+            &Var(name, n) => {
+                let ear = if lex::is_keyword(name) { "`" } else { "" };
+                let at = if n != &"0" { "@" } else { "" };
+                let scope = if n == &"0" { "" } else { n };
+                write!(f, "{ear}{name}{ear}{at}{scope}", ear = ear, name = name, at = at, scope = scope)?;
+                Ok(())
+            }
             Double(n) => write!(f, "{}", n),
             FieldAccess(term, field) => {
                 write!(f, "{}.{}", Show(term.as_ref()), field)

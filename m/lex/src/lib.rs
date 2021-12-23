@@ -12,6 +12,12 @@ pub struct Lex<'s> {
     strstack: Vec<u16>,
 }
 
+pub fn is_keyword(s: &str) -> bool {
+    parse_ident_or_keyword(s)
+        .map(|t| t.is_keyword())
+        .unwrap_or(false)
+}
+
 impl<'s> Lex<'s> {
     pub fn new(source: &'s str) -> Self {
         Lex {
@@ -296,7 +302,7 @@ fn parse_ident_or_keyword(inp: &str) -> R<'_> {
                 })
             }
         })
-        .and_then(longer_than(2))
+        .and_then(longer_than(3))
     })
     .map(|mut tkn| {
         const STRTOKS: &[(&str, fn(&str) -> Token)] = &[

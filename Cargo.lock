@@ -489,6 +489,7 @@ name = "show"
 version = "0.0.1"
 dependencies = [
  "ast",
+ "lex",
 ]
 
 [[package]]

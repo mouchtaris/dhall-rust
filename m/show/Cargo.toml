@@ -5,3 +5,7 @@ edition = '2018'
 [dependencies.ast]
 version = '0.0.1'
 path = '../ast'
+
+[dependencies.lex]
+version = '0.0.1'
+path = '../lex'
