@@ -37,11 +37,12 @@ impl Reservoir {
 
     pub fn import_file<P: AsRef<str>>(&mut self, path: P) -> Result<()> {
         let path = path.as_ref();
-        log::debug!("importing {}", path);
 
         if self.files.contains_key(path) {
+            log::debug!("skip importing {}", path);
             return Ok(());
         }
+        log::debug!("importing {}", path);
 
         let prefix = if is_http(path) { &self.output_dir } else { "" };
         let real_path = format!("{}{}", prefix, path);
@@ -168,7 +169,6 @@ fn path_resolve(base: &str, path: &mut String) {
 
 fn path_clean(path: &mut String) {
     loop {
-        log::trace!("path_clean loop1: {}", path);
         if let Some(n) = path.find("././") {
             path.remove(n + 3);
             path.remove(n + 2);
@@ -183,8 +183,6 @@ fn path_clean(path: &mut String) {
     let mut q = 0;
     let mut p = 0;
     loop {
-        log::trace!("path_clean loop2: {}", path);
-
         if path[p..].starts_with("../") && p > 0 {
             path.remove(p + 2);
             path.remove(p + 1);
@@ -200,7 +198,6 @@ fn path_clean(path: &mut String) {
             trace.push(q);
             q = p;
             p += n + 1;
-            log::trace!("Found more {}:{} {}:{}", q, &path[q..p], n, &path[p..]);
         } else {
             break;
         }
