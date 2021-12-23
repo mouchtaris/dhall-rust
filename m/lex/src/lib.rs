@@ -172,7 +172,15 @@ fn parse_whitespace(inp: &str) -> R<'_> {
 }
 
 fn parse_natural_integer(inp: &str) -> R<'_> {
-    range_parse(inp, |s| Token::Natural(s), |&(_, c)| c.is_ascii_digit()).and_then(longer_than(1))
+    range_parse(
+        inp,
+        |s| Token::Natural(s),
+        |&(i, c)| (i == 0 && c == '+') || c.is_ascii_digit(),
+    )
+    .and_then(|t| match (t.as_str().starts_with("+"), t.as_str().len()) {
+        (true, 0 | 1) => None,
+        _ => Some(t),
+    })
 }
 
 fn parse_negative_integer(inp: &str) -> R<'_> {
@@ -193,10 +201,15 @@ fn parse_double(inp: &str) -> R<'_> {
         move |c| {
             let n = match (q, p, c) {
                 (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c.is_ascii_digit() => 1,
-                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c == '.' => 1,
-                (_, p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
-                (_, p, c) if p.is_ascii_digit() && c == '.' => 1,
-                (_, _, c) if c.is_ascii_digit() => 1,
+                (q, p, '.') if q.is_ascii_digit() && p.is_ascii_digit() => 1,
+                ('-', p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                ('-', p, '.') if p.is_ascii_digit() => 1,
+                (q, '.', c) if q.is_ascii_digit() && c.is_ascii_digit() => 1,
+                ('_', '-', c) if c.is_ascii_digit() => 1,
+                ('_', p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                ('_', p, '.') if p.is_ascii_digit() => 1,
+                ('_', '_', '-') => 1,
+                ('_', '_', c) if c.is_ascii_digit() => 1,
                 _ => return None,
             };
             q = p;
