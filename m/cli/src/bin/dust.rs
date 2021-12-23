@@ -29,25 +29,25 @@ fn main() -> Result<()> {
                 opt_dbg_list_files = true;
             }
             "--resolve" => r.enable_resolve = true,
-            "--fetch" => r.enable_fetch = true,
             "--no_resolve" => r.enable_resolve = false,
+            "--fetch" => r.enable_fetch = true,
+            "--no_fetch" => r.enable_fetch = false,
             "--help" => opt_help = true,
             _ => opt_input_file_path = arg,
         }
     }
 
     if opt_help {
-        eprintln!(
-            r#"
-            "--show" => opt_show = true,
-            "--no_show" => opt_show = false,
-            "--dbg_show_ast" => opt_dbg_show_ast = true,
-            "--dbg_ast" => opt_dbg_list_files = true,
-            "--resolve" => r.enable_resolve = true,
-            "--no_resolve" => r.enable_resolve = false,
-            "--help" => opt_help = true,
-        "#
-        );
+        let helps = &[
+            "| --- Command --- | --- Default ---        |",
+            "  --[no_]resolve     true                    Resolve imports",
+            "  --[no_]fetch       false                   Download http imports to ~/.cache/dust (requires resolve)",
+            "  --[no_]show        !(resolve || fetch)     Show dhall.",
+            "  --help             false                   Show help and exit.",
+            "  --dbg_show_ast     false                   Show the dhall AST. Turns show off.",
+            "  --dbg_list_files   false                   Show the loaded files. Turns show off.",
+        ];
+        helps.iter().for_each(|s| eprintln!("{}", s));
         return Ok(());
     }
 
