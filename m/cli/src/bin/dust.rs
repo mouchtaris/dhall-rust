@@ -24,9 +24,9 @@ fn main() -> Result<()> {
                 opt_show = false;
                 opt_dbg_show_ast = true;
             }
-            "--dbg_ast" => {
+            "--dbg_list_files" => {
                 opt_show = false;
-                opt_dbg_show_ast = true;
+                opt_dbg_list_files = true;
             }
             "--resolve" => r.enable_resolve = true,
             "--fetch" => r.enable_fetch = true,

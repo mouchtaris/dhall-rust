@@ -162,5 +162,47 @@ fn path_resolve(base: &str, path: &mut String) {
     if !is_absolute(path) {
         let (dir, _) = dir_base(base);
         path.insert_str(0, dir);
+        path_clean(path);
+    }
+}
+
+fn path_clean(path: &mut String) {
+    loop {
+        log::trace!("path_clean loop1: {}", path);
+        if let Some(n) = path.find("././") {
+            path.remove(n + 3);
+            path.remove(n + 2);
+            path.remove(n + 1);
+            path.remove(n + 0);
+        } else {
+            break;
+        }
+    }
+
+    let mut trace = Vec::new();
+    let mut q = 0;
+    let mut p = 0;
+    loop {
+        log::trace!("path_clean loop2: {}", path);
+
+        if path[p..].starts_with("../") && p > 0 {
+            path.remove(p + 2);
+            path.remove(p + 1);
+            for i in 0..=(p - q) {
+                path.remove(p - i);
+            }
+            p = q;
+            q = trace.pop().unwrap_or(0);
+        } else if path[p..].starts_with("./") && p > 0 {
+            path.remove(p + 1);
+            path.remove(p + 0);
+        } else if let Some(n) = path[p..].find('/') {
+            trace.push(q);
+            q = p;
+            p += n + 1;
+            log::trace!("Found more {}:{} {}:{}", q, &path[q..p], n, &path[p..]);
+        } else {
+            break;
+        }
     }
 }
