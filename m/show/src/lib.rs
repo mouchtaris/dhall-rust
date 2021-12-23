@@ -87,8 +87,10 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
         use ast::Term::*;
         match obj {
             &Integer(neg, s) => write!(f, "{}{}", if *neg { "-" } else { "" }, s),
+            Embed(code) => writeln!(f, "{}", code),
             Var(name, "0") => write!(f, "{}", name),
             Var(name, n) => write!(f, "{}@{}", name, n),
+            Double(n) => write!(f, "{}", n),
             FieldAccess(term, field) => {
                 write!(f, "{}.{}", Show(term.as_ref()), field)
             }
@@ -113,6 +115,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                 }
                 Ok(())
             }
+            Path(path) => print_list(f, SHOW_LIST_STYLE_PATH, path),
             Record(fields) => print_list(f, SHOW_LIST_STYLE_REC, fields),
             TypeRecord(fields) => print_list(f, SHOW_LIST_STYLE_TYPEREC, fields),
             TypeEnum(fields) => print_list(f, SHOW_LIST_STYLE_TYPEENUM, fields),
@@ -139,7 +142,6 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                     Show(ShowList(list_style, names))
                 )
             }
-            o => panic!("How to show {:?}", o),
         }
     }
 }
@@ -173,6 +175,7 @@ where
 
 #[derive(Copy, Clone)]
 struct ShowListStyle<'s>(&'s str, &'s str, &'s str, &'s str, &'s str, bool);
+const SHOW_LIST_STYLE_PATH: ShowListStyle = ShowListStyle("", "", "", ".", "", false);
 const SHOW_LIST_STYLE_REC: ShowListStyle = ShowListStyle("{", "}", "=", ",", "=", true);
 const SHOW_LIST_STYLE_TYPEREC: ShowListStyle = ShowListStyle("{", "}", ":", ",", "", true);
 const SHOW_LIST_STYLE_TYPEENUM: ShowListStyle = ShowListStyle("<", ">", ":", "|", "", true);
@@ -210,7 +213,10 @@ impl<'i> fmt::Display for Show<ListEntry<'i, &'i (ast::Ident<'i>, Option<Box<ast
     }
 }
 
-impl<'i> fmt::Display for Show<ListEntry<'i, &'i Box<ast::Expr<'i>>>> {
+impl<'i, T> fmt::Display for Show<ListEntry<'i, &'i Box<T>>>
+where
+    Show<&'i T>: fmt::Display,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let ListEntry(_, val) = self.0;
         write!(f, "{}", Show(val.as_ref()))

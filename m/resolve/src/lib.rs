@@ -11,10 +11,11 @@ use {
 mod resolve;
 use resolve::Resolve;
 
-#[derive(Default)]
 pub struct Reservoir {
     // config
     pub output_dir: String,
+    pub enable_resolve: bool,
+    pub enable_fetch: bool,
     // across-state
     pub files: Map<String, String>,
     pub fetched_uris: Set<String>,
@@ -28,6 +29,8 @@ impl Reservoir {
             uris: <_>::default(),
             fetched_uris: <_>::default(),
             files: <_>::default(),
+            enable_resolve: true,
+            enable_fetch: false,
             output_dir,
         }
     }
@@ -50,38 +53,42 @@ impl Reservoir {
         read_buffer.clear();
         let mut ast = parse::parse_read(&mut file, &mut read_buffer)?;
 
-        self.uris.clear();
-        let base_path = path;
-        let mut path = String::new();
+        if self.enable_resolve {
+            self.uris.clear();
+            let base_path = path;
+            let mut path = String::new();
 
-        ast.visit_register(|p| {
-            path.push_str(p);
-            path_resolve(&base_path, &mut path);
-            log::trace!("[register] resolved as {}", path);
+            if self.enable_fetch {
+                ast.visit_register(|p| {
+                    path.push_str(p);
+                    path_resolve(&base_path, &mut path);
+                    log::trace!("[register] resolved as {}", path);
 
-            if is_http(&path) {
-                log::trace!("register url [{:02}]", self.uris.len());
-                self.uris.insert(path.clone());
+                    if is_http(&path) {
+                        log::trace!("register url [{:02}]", self.uris.len());
+                        self.uris.insert(path.clone());
+                    }
+
+                    path.clear();
+                    Ok(())
+                })?;
+
+                self.fetch_http()?;
             }
 
-            path.clear();
-            Ok(())
-        })?;
+            ast.visit_import(|p, _| {
+                path.push_str(p);
+                path_resolve(&base_path, &mut path);
+                log::trace!("[import] resolved as {}", path);
 
-        self.fetch_http()?;
+                self.import_file(path.clone())?;
 
-        ast.visit_import(|p, _| {
-            path.push_str(p);
-            path_resolve(&base_path, &mut path);
-            log::trace!("[import] resolved as {}", path);
+                path.clear();
+                Ok(())
+            })?;
+        }
 
-            self.import_file(path.clone())?;
-
-            path.clear();
-            Ok(())
-        })?;
-
-        self.files.insert(base_path.to_owned(), read_buffer);
+        self.files.insert(path.to_owned(), read_buffer);
         Ok(())
     }
 
