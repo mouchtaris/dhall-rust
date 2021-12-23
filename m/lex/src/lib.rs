@@ -302,7 +302,7 @@ fn parse_ident_or_keyword(inp: &str) -> R<'_> {
                 })
             }
         })
-        .and_then(longer_than(3))
+        .and_then(longer_than(2))
     })
     .map(|mut tkn| {
         const STRTOKS: &[(&str, fn(&str) -> Token)] = &[
