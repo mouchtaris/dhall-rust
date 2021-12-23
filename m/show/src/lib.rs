@@ -92,7 +92,14 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
                 let ear = if lex::is_keyword(name) { "`" } else { "" };
                 let at = if n != &"0" { "@" } else { "" };
                 let scope = if n == &"0" { "" } else { n };
-                write!(f, "{ear}{name}{ear}{at}{scope}", ear = ear, name = name, at = at, scope = scope)?;
+                write!(
+                    f,
+                    "{ear}{name}{ear}{at}{scope}",
+                    ear = ear,
+                    name = name,
+                    at = at,
+                    scope = scope
+                )?;
                 Ok(())
             }
             Double(n) => write!(f, "{}", n),

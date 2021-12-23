@@ -260,5 +260,11 @@ pub fn const_0_expr<'i>() -> Expr<'i> {
 }
 
 pub fn var_expr(s: &str) -> Expr {
+    let s = match s {
+        "Type" => "`Type`",
+        "Kind" => "`Kind`",
+        "Sort" => "`Sort`",
+        s => s,
+    };
     Expr::Term1(Term1::Term(Term::Var(s, "0")))
 }
