@@ -94,7 +94,7 @@ pub TypeEnumField: (Ident<'input>, Option<Val<'input>>) = {
   <Ident> <(":" <Val>)?>    => (<>),
 };
 
-pub Uri = { RelUri, HttpUri };
+pub Uri = { RelUri, HttpUri, "missing" };
 
 pub Guard = Sha256 ("?" <Uri>)?;
 
@@ -171,6 +171,7 @@ extern {
     "else"    => Token::Else(<&'input str>),
     "merge"   => Token::Merge(<&'input str>),
     "with"    => Token::With(<&'input str>),
+    "missing" => Token::Missing(<&'input str>),
     Text      => Token::Text(<&'input str>),
     Natural   => Token::Natural(<&'input str>),
     Negative  => Token::Negative(<&'input str>),
