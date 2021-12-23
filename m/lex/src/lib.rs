@@ -396,63 +396,112 @@ fn parse_block_comment(inp: &str) -> R<'_> {
 }
 
 pub fn parse_dquot_raw_seg(inp: &str) -> R {
-    let mut p = '_';
-    let mut q = '_';
-    let mut done = false;
+    enum State {
+        Init,
+        Escape,
+        Dollar,
+        Done,
+    }
+    let mut state = State::Init;
     scan_parse(
         inp,
         |s| Token::RawText(s),
         move |c| {
-            if done {
-                return None;
-            }
-            let n = match (&q, &p, c) {
-                ('\\', '$', '{') | (_, '\\', _) => 1,
-                (_, _, '"') => {
-                    done = true;
+            Some(match (&state, c) {
+                (State::Dollar, '{') => {
+                    state = State::Done;
                     0
                 }
-                (_, '$', '{') => {
-                    done = true;
-                    -1
+                (State::Dollar, '$') => 1,
+                (State::Dollar, '\\') => {
+                    state = State::Escape;
+                    2
                 }
-                _ => 1,
-            };
-            q = p;
-            p = c;
-            Some(n)
+                (State::Dollar, '"') => {
+                    state = State::Done;
+                    1
+                }
+                (State::Dollar, _) => {
+                    state = State::Init;
+                    2
+                }
+                (State::Init, '$') => {
+                    state = State::Dollar;
+                    0
+                }
+                (State::Init, '\\') => {
+                    state = State::Escape;
+                    1
+                }
+                (State::Init, '"') => {
+                    state = State::Done;
+                    0
+                }
+                (State::Escape, _) => {
+                    state = State::Init;
+                    1
+                }
+                (State::Init, _) => 1,
+                (State::Done, _) => return None,
+            })
         },
     )
 }
 
 pub fn parse_ddquote_raw_seg(inp: &str) -> R {
-    let mut p = '_';
-    let mut q = '_';
-    let mut r = '_';
-    let mut done = false;
+    enum State {
+        Init,
+        Dollar,
+        Esc1,
+        Esc2,
+        Done,
+    }
+    let mut state = State::Init;
     scan_parse(
         inp,
         |s| Token::RawText(s),
         move |c| {
-            if done {
-                return None;
-            }
-            let n = match (&r, &q, &p, c) {
-                ('\'', '\'', '$', '{') => 1,
-                ('\'', '\'', _, _) => {
-                    done = true;
-                    -3
+            Some(match (&state, c) {
+                (State::Dollar, '{') => {
+                    state = State::Done;
+                    0
                 }
-                (_, _, '$', '{') => {
-                    done = true;
-                    -1
+                (State::Dollar, '$') => 1,
+                (State::Dollar, '\'') => {
+                    state = State::Esc1;
+                    1
                 }
-                _ => 1,
-            };
-            r = q;
-            q = p;
-            p = c;
-            Some(n)
+                (State::Dollar, _) => {
+                    state = State::Init;
+                    2
+                }
+                (State::Init, '$') => {
+                    state = State::Dollar;
+                    0
+                }
+                (State::Init, '\'') => {
+                    state = State::Esc1;
+                    0
+                }
+                (State::Init, _) => 1,
+                (State::Esc1, '\'') => {
+                    state = State::Esc2;
+                    0
+                }
+                (State::Esc2, '$') => {
+                    state = State::Init;
+                    3
+                }
+                (State::Esc1, _) => {
+                    state = State::Init;
+                    2
+                }
+                (State::Esc2, _) => {
+                    state = State::Done;
+                    0
+                }
+                (State::Done, _) => return None,
+            })
         },
     )
 }
