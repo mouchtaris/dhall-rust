@@ -52,7 +52,12 @@ pub enum Term<'i> {
     Record(RecordData<'i>),
     TypeRecord(RecordData<'i>),
     TypeEnum(TypeEnumData<'i>),
-    Import(&'i str, Option<(&'i str, Option<&'i str>)>),
+    Import {
+        path: &'i str,
+        as_: Option<&'i str>,
+        guard: Option<&'i str>,
+        fall: Option<(&'i str, Option<&'i str>)>,
+    },
     Expr(Val<'i>),
     Merge(RecordData<'i>, Box<Term<'i>>),
     Embed(String),
@@ -124,14 +129,14 @@ impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            As(s) | Missing(s) | LogicNeq(s) | LogicEq(s) | Natural(s) | Scope(s) | LogicConj(s)
-            | LogicDisj(s) | Equiv(s) | Double(s) | Merge(s) | DDQuote(s) | DColon(s)
-            | RawText(s) | Ident(s) | Negative(s) | Text(s) | RelUri(s) | HttpUri(s)
-            | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
-            | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
-            | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
-            | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
-            | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
+            As(s) | Missing(s) | LogicNeq(s) | LogicEq(s) | Natural(s) | Scope(s)
+            | LogicConj(s) | LogicDisj(s) | Equiv(s) | Double(s) | Merge(s) | DDQuote(s)
+            | DColon(s) | RawText(s) | Ident(s) | Negative(s) | Text(s) | RelUri(s)
+            | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s)
+            | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s)
+            | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s)
+            | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s)
+            | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
             | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
         }
     }

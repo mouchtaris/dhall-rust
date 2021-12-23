@@ -92,11 +92,27 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             FieldAccess(term, field) => {
                 write!(f, "{}.{}", Show(term.as_ref()), field)
             }
-            Import(path, Some((guard, Some(fallback)))) => {
-                write!(f, "{} {} ? {}", path, guard, fallback)
+            Import {
+                path,
+                as_,
+                guard,
+                fall,
+            } => {
+                write!(f, "{}", path)?;
+                if let Some(guard) = guard {
+                    write!(f, " {}", guard)?;
+                }
+                if let Some(as_) = as_ {
+                    write!(f, " as {}", as_)?;
+                }
+                if let Some((fall, fall_as)) = fall {
+                    write!(f, " ? {}", fall)?;
+                    if let Some(as_) = fall_as {
+                        write!(f, " as {}", as_)?;
+                    }
+                }
+                Ok(())
             }
-            Import(path, Some((guard, None))) => write!(f, "{} {}", path, guard),
-            Import(path, None) => write!(f, "{}", path),
             Record(fields) => print_list(f, SHOW_LIST_STYLE_REC, fields),
             TypeRecord(fields) => print_list(f, SHOW_LIST_STYLE_TYPEREC, fields),
             TypeEnum(fields) => print_list(f, SHOW_LIST_STYLE_TYPEENUM, fields),

@@ -73,7 +73,7 @@ pub Term: Term<'input> = {
   "\"" <TextEntryList<"\"">>                                => new::term::text((1, <>)),
   "''" <TextEntryList<"''">>                                => new::term::text((2, <>)),
   Record                                                    => new::term::record(<>),
-  Uri Guard?                                                => new::term::import((<>)),
+  Import                                                    => new::term::import(<>),
 };
 
 pub Record: RecordData<'input> = {
@@ -96,8 +96,6 @@ pub TypeEnumField: (Ident<'input>, Option<Val<'input>>) = {
 
 pub Uri = { RelUri, HttpUri, "missing" };
 
-pub Guard = Sha256 ("as" <Ident>)? ("?" <Uri>)?;
-
 TextEntryList<END>: Deq<TextEntry<'input>> = {
   END =>
     Deq::new(),
@@ -115,6 +113,10 @@ pub LetStmtList: Deq<LetStmt<'input>> = {
 
 pub LetStmt =
   "let" <Ident> <(":" <Val>)?> "=" <Val>
+;
+
+pub Import =
+  <Uri> <Sha256?> <("as" <Ident>)?> <("?" <Uri> <("as" <Ident>)?> )?>
 ;
 
 extern {

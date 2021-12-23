@@ -70,7 +70,10 @@ impl<'i> Resolve for ast::Term<'i> {
             List(vs) => vs.resolve(r),
             TypeRecord(es) | Record(es) => es.resolve(r),
             TypeEnum(es) => es.resolve(r),
-            &mut Import(path, _) => {
+            Import {
+                path: "missing", ..
+            } => Ok(()),
+            &mut Import { path, .. } => {
                 r.visit_register(path)?;
                 r.visit_import(path, self)?;
                 Ok(())

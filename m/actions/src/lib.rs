@@ -9,7 +9,7 @@ pub mod new {
         ($name:ident -> $t:ident $l:lifetime : $treq:ty = $m:expr) => {
             pub fn $name<$l, T: Into<$treq>>(inp: T) -> $t<$l> {
                 let t = $m(inp.into());
-                log::trace!("{:?}", t);
+                log::trace!("Reduce {:?}", t);
                 t
             }
         };
@@ -81,8 +81,8 @@ pub mod new {
 
         impl_report! {
         import -> Term 's
-            : (&'s str, Option<(&'s str, Option<&'s str>)>)
-            = |(path, guard)| Term::Import(path, guard) }
+            : (&'s str, Option<&'s str>, Option<&'s str>, Option<(&'s str, Option<&'s str>)>)
+            = |(path, guard, as_, fall)| Term::Import { path, guard, as_, fall } }
 
         // fn select2<T: Analogous<(Term<'i>, Deq<Term1<'i>>)>>(t: T) -> Term<'i> {
         // }
