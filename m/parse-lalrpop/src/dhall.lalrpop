@@ -96,7 +96,7 @@ pub TypeEnumField: (Ident<'input>, Option<Val<'input>>) = {
 
 pub Uri = { RelUri, HttpUri, "missing" };
 
-pub Guard = Sha256 ("?" <Uri>)?;
+pub Guard = Sha256 ("as" <Ident>)? ("?" <Uri>)?;
 
 TextEntryList<END>: Deq<TextEntry<'input>> = {
   END =>
@@ -166,6 +166,7 @@ extern {
     "||"      => Token::LogicDisj(<&'input str>),
     "=="      => Token::LogicEq(<&'input str>),
     "!="      => Token::LogicNeq(<&'input str>),
+    "as"      => Token::As(<&'input str>),
     "if"      => Token::If(<&'input str>),
     "then"    => Token::Then(<&'input str>),
     "else"    => Token::Else(<&'input str>),

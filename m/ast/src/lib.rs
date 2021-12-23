@@ -117,13 +117,14 @@ pub enum Token<'i> {
     LogicEq(&'i str),
     LogicNeq(&'i str),
     Scope(&'i str),
+    As(&'i str),
 }
 
 impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            Missing(s) | LogicNeq(s) | LogicEq(s) | Natural(s) | Scope(s) | LogicConj(s)
+            As(s) | Missing(s) | LogicNeq(s) | LogicEq(s) | Natural(s) | Scope(s) | LogicConj(s)
             | LogicDisj(s) | Equiv(s) | Double(s) | Merge(s) | DDQuote(s) | DColon(s)
             | RawText(s) | Ident(s) | Negative(s) | Text(s) | RelUri(s) | HttpUri(s)
             | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
@@ -211,6 +212,7 @@ impl<'s> Token<'s> {
             LogicEq(_) => LogicEq(val),
             LogicNeq(_) => LogicNeq(val),
             Scope(_) => Scope(val),
+            As(_) => As(val),
         }
     }
 }
