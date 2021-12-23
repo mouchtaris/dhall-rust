@@ -85,20 +85,15 @@ impl Reservoir {
     }
 
     fn fetch_http(&mut self) -> Result<()> {
-        use std::process::{Command, Stdio};
-
-        let mut cmd = Command::new("curl");
-
-        cmd.stdin(Stdio::piped());
-
-        let mut fetch_count = self.fetched_uris.len();
         let opts = [
             "--no-progress-meter",
             "--create-dirs",
             "--output-dir",
             &self.output_dir,
         ];
+
         let mut args: Vec<String> = opts.iter().map(|&s| s.to_owned()).collect();
+        let mut fetch_count = self.fetched_uris.len();
         for uri in &self.uris {
             if is_http(uri) && !self.fetched_uris.contains(uri) {
                 args.push(uri.clone());
@@ -108,6 +103,16 @@ impl Reservoir {
             }
         }
         fetch_count = self.fetched_uris.len() - fetch_count;
+
+        if fetch_count == 0 {
+            return Ok(());
+        }
+
+        use std::process::{Command, Stdio};
+
+        let mut cmd = Command::new("curl");
+
+        cmd.stdin(Stdio::piped());
         cmd.args(args);
 
         log::debug!(
