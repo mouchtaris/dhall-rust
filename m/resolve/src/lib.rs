@@ -13,10 +13,11 @@ use resolve::Resolve;
 
 #[derive(Default)]
 pub struct Reservoir {
+    // config
+    pub output_dir: String,
     // across-state
-    fetched_uris: Set<String>,
-    output_dir: String,
-    files: Map<String, String>,
+    pub files: Map<String, String>,
+    pub fetched_uris: Set<String>,
     // iteration-state
     uris: Set<String>,
 }

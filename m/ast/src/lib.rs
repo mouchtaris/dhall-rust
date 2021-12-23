@@ -46,7 +46,7 @@ pub enum Term<'i> {
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
     Path(TermPath<'i>),
-    Var(Ident<'i>),
+    Var(Ident<'i>, &'i str),
     Text(u8, Deq<TextEntry<'i>>),
     List(Deq<Val<'i>>),
     Record(RecordData<'i>),
@@ -61,7 +61,8 @@ pub enum Term<'i> {
 #[derive(Debug, Clone, Copy)]
 pub enum Token<'i> {
     Ident(&'i str),
-    Integer(&'i str),
+    Natural(&'i str),
+    Negative(&'i str),
     Double(&'i str),
     Text(&'i str),
     RelUri(&'i str),
@@ -112,20 +113,24 @@ pub enum Token<'i> {
     Equiv(&'i str),
     LogicConj(&'i str),
     LogicDisj(&'i str),
+    LogicEq(&'i str),
+    LogicNeq(&'i str),
+    Scope(&'i str),
 }
 
 impl<'s> AsRef<str> for Token<'s> {
     fn as_ref(&self) -> &str {
         use Token::*;
         match self {
-            LogicConj(s) | LogicDisj(s) | Equiv(s) | Double(s) | Merge(s) | DDQuote(s)
-            | DColon(s) | RawText(s) | Ident(s) | Integer(s) | Text(s) | RelUri(s) | HttpUri(s)
-            | Sha256(s) | Conj1(s) | Conj2(s) | Alt(s) | Lambda(s) | Arrow(s) | Equals(s)
-            | Let(s) | In(s) | LPar(s) | RPar(s) | Colon(s) | Forall(s) | TextConcat(s)
-            | ListConcat(s) | Plus(s) | Div(s) | Star(s) | Minus(s) | LBrace(s) | RBrace(s)
-            | LBracket(s) | RBracket(s) | LAngle(s) | RAngle(s) | Comma(s) | Dot(s) | Pipe(s)
-            | DQuote(s) | SQuote(s) | Questionmark(s) | If(s) | Then(s) | Else(s)
-            | TextImbue(s) | With(s) | Comment(s) | Empty(s) | Whitespace(s) => s,
+            LogicNeq(s) | LogicEq(s) | Natural(s) | Scope(s) | LogicConj(s) | LogicDisj(s)
+            | Equiv(s) | Double(s) | Merge(s) | DDQuote(s) | DColon(s) | RawText(s) | Ident(s)
+            | Negative(s) | Text(s) | RelUri(s) | HttpUri(s) | Sha256(s) | Conj1(s) | Conj2(s)
+            | Alt(s) | Lambda(s) | Arrow(s) | Equals(s) | Let(s) | In(s) | LPar(s) | RPar(s)
+            | Colon(s) | Forall(s) | TextConcat(s) | ListConcat(s) | Plus(s) | Div(s) | Star(s)
+            | Minus(s) | LBrace(s) | RBrace(s) | LBracket(s) | RBracket(s) | LAngle(s)
+            | RAngle(s) | Comma(s) | Dot(s) | Pipe(s) | DQuote(s) | SQuote(s) | Questionmark(s)
+            | If(s) | Then(s) | Else(s) | TextImbue(s) | With(s) | Comment(s) | Empty(s)
+            | Whitespace(s) => s,
         }
     }
 }
@@ -149,7 +154,8 @@ impl<'s> Token<'s> {
         use Token::*;
         match self {
             Ident(_) => Ident(val),
-            Integer(_) => Integer(val),
+            Natural(_) => Natural(val),
+            Negative(_) => Negative(val),
             Double(_) => Double(val),
             Text(_) => Text(val),
             RelUri(_) => RelUri(val),
@@ -200,6 +206,9 @@ impl<'s> Token<'s> {
             Equiv(_) => Equiv(val),
             LogicConj(_) => LogicConj(val),
             LogicDisj(_) => LogicDisj(val),
+            LogicEq(_) => LogicEq(val),
+            LogicNeq(_) => LogicNeq(val),
+            Scope(_) => Scope(val),
         }
     }
 }
@@ -227,5 +236,5 @@ pub fn const_0_expr<'i>() -> Expr<'i> {
 }
 
 pub fn var_expr(s: &str) -> Expr {
-    Expr::Term1(Term1::Term(Term::Var(s)))
+    Expr::Term1(Term1::Term(Term::Var(s, "0")))
 }

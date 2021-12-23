@@ -21,8 +21,8 @@ pub mod new {
         use super::*;
         impl_report! {
         var -> Term 's
-            : &'s str
-            = |inp| Term::Var(inp) }
+            : (&'s str, &'s str)
+            = |(name, scope)| Term::Var(name, scope) }
 
         impl_report! {
         field_access -> Term 's
@@ -61,12 +61,8 @@ pub mod new {
 
         impl_report! {
         integer -> Term 's
-            : &'s str
-            = |s: &'s str| {
-                let is_neg = s.starts_with("-");
-                let rest_n = if is_neg { 1 } else { 0 };
-                let n = &s[rest_n..];
-                Term::Integer(is_neg, n) } }
+            : (bool, &'s str)
+            = |(is_neg, val)| Term::Integer(is_neg, val) }
 
         impl_report! {
         double -> Term 's

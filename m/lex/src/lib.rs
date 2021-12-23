@@ -36,7 +36,8 @@ impl<'s> Lex<'s> {
 
         parse_whitespace(inp)
             .or_else(|| parse_double(inp))
-            .or_else(|| parse_integer(inp))
+            .or_else(|| parse_natural_integer(inp))
+            .or_else(|| parse_negative_integer(inp))
             .or_else(|| parse_block_comment(inp))
             .or_else(|| parse_line_comment1(inp))
             .or_else(|| parse_line_comment2(inp))
@@ -170,20 +171,40 @@ fn parse_whitespace(inp: &str) -> R<'_> {
     range_parse(inp, |s| Token::Whitespace(s), |(_, c)| c.is_whitespace())
 }
 
-fn parse_integer(inp: &str) -> R<'_> {
-    let mut n = 1;
+fn parse_natural_integer(inp: &str) -> R<'_> {
+    range_parse(inp, |s| Token::Natural(s), |&(_, c)| c.is_ascii_digit()).and_then(longer_than(1))
+}
+
+fn parse_negative_integer(inp: &str) -> R<'_> {
     range_parse(
         inp,
-        |s| Token::Integer(s),
-        |&(i, c)|
-            if i == 0 && c == '-' {
-                n = 2;
-                true
-            } else {
-                false
-            } || c.is_ascii_digit(),
+        |s| Token::Negative(s),
+        |&(i, c)| (i == 0 && c == '-') || c.is_ascii_digit(),
     )
-        .and_then(longer_than(n))
+    .and_then(longer_than(2))
+}
+
+fn parse_double(inp: &str) -> R<'_> {
+    let mut p = '_';
+    let mut q = '_';
+    scan_parse(
+        inp,
+        |s| Token::Double(s),
+        move |c| {
+            let n = match (q, p, c) {
+                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c == '.' => 1,
+                (_, p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
+                (_, p, c) if p.is_ascii_digit() && c == '.' => 1,
+                (_, _, c) if c.is_ascii_digit() => 1,
+                _ => return None,
+            };
+            q = p;
+            p = c;
+            Some(n)
+        },
+    )
+    .and_then(longer_than(2))
 }
 
 fn parse_rel_uri(inp: &str) -> R<'_> {
@@ -325,29 +346,6 @@ fn parse_line_comment2(inp: &str) -> R<'_> {
     .and_then(longer_than(2))
 }
 
-fn parse_double(inp: &str) -> R<'_> {
-    let mut p = '_';
-    let mut q = '_';
-    scan_parse(
-        inp,
-        |s| Token::Double(s),
-        move |c| {
-            let n = match (q, p, c) {
-                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c.is_ascii_digit() => 1,
-                (q, p, c) if q.is_ascii_digit() && p.is_ascii_digit() && c == '.' => 1,
-                (_, p, c) if p.is_ascii_digit() && c.is_ascii_digit() => 1,
-                (_, p, c) if p.is_ascii_digit() && c == '.' => 1,
-                (_, _, c) if c.is_ascii_digit() => 1,
-                _ => return None,
-            };
-            q = p;
-            p = c;
-            Some(n)
-        },
-    )
-    .and_then(longer_than(2))
-}
-
 fn parse_block_comment(inp: &str) -> R<'_> {
     let mut p = '_';
     let mut done = false;
@@ -476,6 +474,8 @@ fn parse_punctuation(inp: &str) -> R<'_> {
         .or_else(|| parse_verbatim(inp, "''", "", |s| DDQuote(s)))
         .or_else(|| parse_verbatim(inp, "&&", "", |s| LogicConj(s)))
         .or_else(|| parse_verbatim(inp, "||", "", |s| LogicDisj(s)))
+        .or_else(|| parse_verbatim(inp, "==", "", |s| LogicEq(s)))
+        .or_else(|| parse_verbatim(inp, "!=", "", |s| LogicNeq(s)))
         .or_else(|| parse_verbatim(inp, "=", "", |s| Equals(s)))
         .or_else(|| parse_verbatim(inp, "(", "", |s| LPar(s)))
         .or_else(|| parse_verbatim(inp, ")", "", |s| RPar(s)))
@@ -496,4 +496,5 @@ fn parse_punctuation(inp: &str) -> R<'_> {
         .or_else(|| parse_verbatim(inp, "|", "", |s| Pipe(s)))
         .or_else(|| parse_verbatim(inp, "'", "", |s| SQuote(s)))
         .or_else(|| parse_verbatim(inp, "?", "", |s| Questionmark(s)))
+        .or_else(|| parse_verbatim(inp, "@", "", |s| Scope(s)))
 }
