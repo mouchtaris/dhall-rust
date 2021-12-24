@@ -82,9 +82,12 @@ pub Record: RecordData<'input> = {
 };
 
 pub RecordField: (Path<'input>, Val<'input>) = {
-  Ident                     => (ast::deq(<>), Box::new(ast::var_expr(<>))),
-  <Path> "=" <Val>          => (<>),
+  Ident                                         => (ast::path([<>]), Box::new(ast::var_expr(<>))),
+  <Path> "=" <Val>                              => (<>),
+  <n: RecordFieldKeywordName> "=" <v: Val>      => (ast::path([n]), v),
 };
+
+pub RecordFieldKeywordName = { "else" };
 
 pub TypeRecordField: (Path<'input>, Val<'input>) = {
   <Path> ":" <Val>          => (<>),

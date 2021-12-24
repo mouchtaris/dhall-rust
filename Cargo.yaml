@@ -9,9 +9,19 @@ module:
       - show
       - resolve
       - error
+      - eval
     dep_crate:
       - log
       - pretty_env_logger
+  eval:
+    dep_mod:
+      - ast
+      - parse
+      - lex
+      - show
+      - error
+    dep_crate:
+      - log
   resolve:
     dep_mod:
       - parse

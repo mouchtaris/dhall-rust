@@ -16,6 +16,7 @@ fn main() -> Result<()> {
     let mut opt_dbg_show_ast = false;
     let mut opt_help = false;
     let mut opt_input_file_path = format!("/dev/stdin");
+    let mut opt_eval = false;
     for arg in std::env::args().skip(1) {
         match arg.as_str() {
             "--show" => opt_show = true,
@@ -33,6 +34,7 @@ fn main() -> Result<()> {
             "--fetch" => r.enable_fetch = true,
             "--no_fetch" => r.enable_fetch = false,
             "--help" => opt_help = true,
+            "--eval" => opt_eval = true,
             _ => opt_input_file_path = arg,
         }
     }
@@ -54,16 +56,30 @@ fn main() -> Result<()> {
     r.import_file(&opt_input_file_path)?;
 
     if opt_dbg_list_files {
-        eprintln!("Files:");
+        println!("-- Imported files:");
+        println!("{{");
         for (f, (o, _)) in r.files() {
-            eprintln!("- {} {}", o, f);
+            println!(", {{ order = {}, path = {} }}", o, f);
         }
+        println!("}}");
     }
+
+    let resolved_code = format!(
+        "{} in `{}`",
+        resolve::Importer(&mut r),
+        &opt_input_file_path
+    );
 
     if opt_show || opt_dbg_show_ast {
         if r.enable_resolve {
-            println!("{}", resolve::Importer(&mut r));
-            println!("in `{}`", &opt_input_file_path);
+            let print = if opt_eval {
+                let ast = parse::parse_str(&resolved_code)?;
+                let ast = eval::eval(ast)?;
+                format!("{}", show::Show(&ast))
+            } else {
+                resolved_code
+            };
+            println!("{}", print);
         } else if let Some(source) = r.file(&opt_input_file_path) {
             let ast = parse::parse_str(source)?;
             if opt_show {

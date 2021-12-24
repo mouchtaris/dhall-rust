@@ -4,6 +4,7 @@ members = [
     'm/ast',
     'm/cli',
     'm/error',
+    'm/eval',
     'm/lex',
     'm/parse',
     'm/parse-lalrpop',
@@ -21,6 +22,9 @@ path = 'm/cli'
 
 [patch.crates-io.error]
 path = 'm/error'
+
+[patch.crates-io.eval]
+path = 'm/eval'
 
 [patch.crates-io.lex]
 path = 'm/lex'

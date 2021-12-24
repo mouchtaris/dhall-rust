@@ -243,6 +243,14 @@ pub fn deq<T>(t: T) -> Deq<T> {
     d
 }
 
+pub fn path<'i, P>(p: P) -> Path<'i>
+where
+    P: IntoIterator,
+    <P as IntoIterator>::Item: ToOwned<Owned = &'i str>,
+{
+    p.into_iter().map(|s| s.to_owned()).collect()
+}
+
 pub fn utf8len(c: char) -> usize {
     let mut buf = [0u8; 4];
     c.encode_utf8(&mut buf).as_bytes().len()
@@ -267,4 +275,20 @@ pub fn var_expr(s: &str) -> Expr {
         s => s,
     };
     Expr::Term1(Term1::Term(Term::Var(s, "0")))
+}
+
+impl<'i> Default for Term<'i> {
+    fn default() -> Self {
+        const_0_term()
+    }
+}
+impl<'i> Default for Term1<'i> {
+    fn default() -> Self {
+        Self::Term(<_>::default())
+    }
+}
+impl<'i> Default for Expr<'i> {
+    fn default() -> Self {
+        Self::Term1(<_>::default())
+    }
 }
