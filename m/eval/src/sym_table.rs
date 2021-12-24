@@ -1,6 +1,7 @@
-use super::{Deq, Map, Stealr};
+use super::{Deq, Map};
+use ast::Expr;
 
-pub type Value<'i> = Option<ast::Expr<'i>>;
+pub type Value<'i> = Option<Expr<'i>>;
 
 #[derive(Default)]
 pub struct Info<'i> {
@@ -19,7 +20,7 @@ pub struct SymTable<'i> {
 }
 
 impl<'i> SymTable<'i> {
-    pub const NONE: Option<ast::Expr<'i>> = None;
+    pub const NONE: &'i Option<ast::Expr<'i>> = &None;
 
     pub fn enter_scope(&mut self) {
         self.scope.push_front(<_>::default())
@@ -29,11 +30,7 @@ impl<'i> SymTable<'i> {
         self.scope.pop_front();
     }
 
-    pub fn add<E, T>(&mut self, name: &'i str, mut typ: T, mut val: E)
-    where
-        E: Stealr<Value<'i>>,
-        T: Stealr<Value<'i>>,
-    {
+    pub fn add(&mut self, name: &'i str, typ: Value<'i>, val: Value<'i>) {
         let v = self
             .scope
             .front_mut()
@@ -41,8 +38,8 @@ impl<'i> SymTable<'i> {
             .name_info
             .entry(name)
             .or_default();
-        val.stealr_give(&mut v.value);
-        typ.stealr_give(&mut v.typ);
+        v.value = val;
+        v.typ = typ;
     }
 
     pub fn lookup(&self, name: &str, mut scope: u8) -> Option<&Info<'i>> {

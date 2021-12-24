@@ -292,3 +292,21 @@ impl<'i> Default for Expr<'i> {
         Self::Term1(<_>::default())
     }
 }
+
+impl<'i> Into<Expr<'i>> for Term<'i> {
+    fn into(self) -> Expr<'i> {
+        <Term1<'i> as From<Term<'i>>>::from(self).into()
+    }
+}
+
+impl<'i> From<Term1<'i>> for Expr<'i> {
+    fn from(t1: Term1) -> Expr {
+        Expr::Term1(t1)
+    }
+}
+
+impl<'i> From<Term<'i>> for Term1<'i> {
+    fn from(t: Term) -> Term1 {
+        Term1::Term(t)
+    }
+}

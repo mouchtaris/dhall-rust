@@ -73,8 +73,9 @@ fn main() -> Result<()> {
     if opt_show || opt_show_ast {
         let source = if r.enable_resolve {
             if opt_eval {
-                let ast = parse::parse_str(&resolved_code)?;
-                let ast = eval::eval(ast)?;
+                let mut ctx = eval::ctx();
+                let mut ast = parse::parse_str(&resolved_code)?;
+                let _ctx = eval::eval(&mut ctx, &mut ast)?;
                 format!("{}", show::Show(&ast))
             } else {
                 resolved_code
