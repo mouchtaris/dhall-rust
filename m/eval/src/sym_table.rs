@@ -1,4 +1,4 @@
-use super::{Deq, Intoz, Map, Stealr};
+use super::{Deq, Map, Stealr};
 
 pub type Value<'i> = Option<ast::Expr<'i>>;
 
@@ -29,7 +29,7 @@ impl<'i> SymTable<'i> {
         self.scope.pop_front();
     }
 
-    pub fn add<E, T>(&mut self, name: &'i str, typ: T, val: E)
+    pub fn add<E, T>(&mut self, name: &'i str, mut typ: T, mut val: E)
     where
         E: Stealr<Value<'i>>,
         T: Stealr<Value<'i>>,
@@ -41,8 +41,8 @@ impl<'i> SymTable<'i> {
             .name_info
             .entry(name)
             .or_default();
-        v.value = val.intoz();
-        v.typ = typ.intoz();
+        val.stealr_give(&mut v.value);
+        typ.stealr_give(&mut v.typ);
     }
 
     pub fn lookup(&self, name: &str, mut scope: u8) -> Option<&Info<'i>> {

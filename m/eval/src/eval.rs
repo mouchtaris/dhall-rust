@@ -1,4 +1,4 @@
-use super::{bail, Error, Evaluator, Intoz, Result, Stealr};
+use super::{bail, Error, Evaluator, Result, Stealr};
 
 pub type Value<'i> = Result<ast::Expr<'i>>;
 
@@ -12,8 +12,14 @@ pub trait Eval<'i> {
     where
         Self: Stealr<ast::Expr<'i>>,
     {
-        let mut expr = self.stealr_give().eval(ctx)?;
+        let mut expr = <_>::default();
+
         self.stealr_take(&mut expr);
+
+        expr = expr.eval(ctx)?;
+
+        self.stealr_give(&mut expr);
+
         Ok(())
     }
 }
@@ -25,10 +31,10 @@ impl<'i, T> Eval<'i> for T
 where
     T: Stealr<ast::Expr<'i>>,
 {
-    fn eval(self, ctx: &mut Evaluator<'i>) -> Value<'i> {
+    fn eval(mut self, ctx: &mut Evaluator<'i>) -> Value<'i> {
         use ast::{Expr::*, Term::*, Term1::*};
 
-        let expr = self.intoz();
+        let expr = self.steal_out();
 
         Ok(match expr {
             Let(defs, val) => {
@@ -63,6 +69,12 @@ where
                     None => Term1(Term(Var(name, scope_str))),
                 }
             }
+            Term1(Evaluation(f, x)) => {
+                let f = f.eval(ctx)?;
+                match (f, x) {
+                    o => panic!("{:?}", o),
+                }
+            }
             mut in_place => {
                 match &mut in_place {
                     Term1(Arrow(_, a, b)) => {
@@ -73,6 +85,13 @@ where
                         ctx.enter_scope();
                         b.eval_inplace(ctx)?;
                         ctx.exit_scope();
+                    }
+                    Term1(Term(TypeRecord(fields))) => {
+                        for (_, val) in fields {
+                            ctx.enter_scope();
+                            val.eval_inplace(ctx)?;
+                            ctx.exit_scope();
+                        }
                     }
                     o => bail!("How to eval {:?}", o),
                 };
