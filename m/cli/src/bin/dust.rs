@@ -12,8 +12,8 @@ fn main() -> Result<()> {
     let mut r = resolve::Reservoir::new(home);
 
     let mut opt_show = true;
-    let mut opt_dbg_list_files = false;
-    let mut opt_dbg_show_ast = false;
+    let mut opt_list_files = false;
+    let mut opt_show_ast = false;
     let mut opt_help = false;
     let mut opt_input_file_path = format!("/dev/stdin");
     let mut opt_eval = false;
@@ -21,13 +21,13 @@ fn main() -> Result<()> {
         match arg.as_str() {
             "--show" => opt_show = true,
             "--no_show" => opt_show = false,
-            "--ast" => {
+            "--ast!" => {
                 opt_show = false;
-                opt_dbg_show_ast = true;
+                opt_show_ast = true;
             }
             "--files" => {
                 opt_show = false;
-                opt_dbg_list_files = true;
+                opt_list_files = true;
             }
             "--resolve" => r.enable_resolve = true,
             "--no_resolve" => r.enable_resolve = false,
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
             "  --[no_]fetch       false                   Download http imports to ~/.cache/dust (requires resolve)",
             "  --[no_]show        !(resolve || fetch)     Show dhall.",
             "  --help             false                   Show help and exit.",
-            "  --ast              false                   Show the dhall AST. Turns show off.",
+            "  --ast!             false                   Show the dhall AST. Turns show off. [!] Care!",
             "  --files            false                   Show the loaded files. Turns show off.",
         ];
         helps.iter().for_each(|s| eprintln!("{}", s));
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
 
     r.import_file(&opt_input_file_path)?;
 
-    if opt_dbg_list_files {
+    if opt_list_files {
         println!("-- Imported files:");
         println!("{{");
         for (f, (o, _)) in r.files() {
@@ -70,24 +70,24 @@ fn main() -> Result<()> {
         &opt_input_file_path
     );
 
-    if opt_show || opt_dbg_show_ast {
-        if r.enable_resolve {
-            let print = if opt_eval {
+    if opt_show || opt_show_ast {
+        let source = if r.enable_resolve {
+            if opt_eval {
                 let ast = parse::parse_str(&resolved_code)?;
                 let ast = eval::eval(ast)?;
                 format!("{}", show::Show(&ast))
             } else {
                 resolved_code
-            };
-            println!("{}", print);
-        } else if let Some(source) = r.file(&opt_input_file_path) {
-            let ast = parse::parse_str(source)?;
-            if opt_show {
-                println!("{}", show::Show(&ast));
             }
-            if opt_dbg_show_ast {
-                eprintln!("{:#?}", &ast);
-            }
+        } else {
+            r.file(&opt_input_file_path).unwrap().to_owned()
+        };
+        let ast = parse::parse_str(&source)?;
+        if opt_show {
+            println!("{}", show::Show(&ast));
+        }
+        if opt_show_ast {
+            println!("{:#?}", &ast);
         }
     }
 
