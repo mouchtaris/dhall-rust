@@ -20,14 +20,14 @@ pub type RecordData<'i> = Deq<RecordEntry<'i>>;
 pub type TypeEnumEntry<'i> = (Ident<'i>, Option<Val<'i>>);
 pub type TypeEnumData<'i> = Deq<TypeEnumEntry<'i>>;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expr<'i> {
     Term1(Term1<'i>),
     Let(Deq<LetStmt<'i>>, Val<'i>),
     Lambda(Ident<'i>, Option<Val<'i>>, Val<'i>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Term1<'i> {
     Term(Term<'i>),
     Evaluation(Box<Term1<'i>>, Term<'i>),
@@ -39,7 +39,7 @@ pub enum Term1<'i> {
     Construct(Box<Term1<'i>>, RecordData<'i>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Term<'i> {
     Integer(bool, &'i str),
     Double(&'i str),
@@ -63,7 +63,7 @@ pub enum Term<'i> {
     Embed(String),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Copy, Clone, Debug)]
 pub enum Token<'i> {
     Ident(&'i str),
     Natural(&'i str),
