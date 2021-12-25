@@ -123,23 +123,20 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     Record(fields) => {
                         fields.retain(|(path, _)| path.front().map(|s| name == s).unwrap_or(false));
 
+                        let mut parafields = mem::take(fields);
                         let mut emerged = None;
                         let mut retained = ast::Deq::new();
-                        ctx =
-                            fields
-                                .iter_mut()
-                                .fold(Ok(ctx), |ctx: Result<Ctx>, (path, val)| {
-                                    let ctx = in_scope(ctx?, val)?;
 
-                                    path.pop_front();
-                                    if path.is_empty() {
-                                        emerged = Some(val);
-                                    } else {
-                                        retained.push_back((mem::take(path), mem::take(val)));
-                                    }
+                        for (path, field) in &mut parafields {
+                            ctx = in_scope(ctx, field)?;
 
-                                    Ok(ctx)
-                                })?;
+                            path.pop_front();
+                            if path.is_empty() {
+                                emerged = Some(field);
+                            } else {
+                                retained.push_back((mem::take(path), mem::take(field)));
+                            }
+                        }
 
                         if let Some(inner) = emerged {
                             let mut inner = ctx.unbox(inner);
@@ -148,15 +145,15 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                 Term1(Term(Record(inner_fields))) => {
                                     inner_fields.append(&mut retained);
                                 }
-                                other if retained.is_empty() => {}
-                                other => bail! {
+                                _ if retained.is_empty() => {}
+                                _ => bail! {
                                     "How to access {} from {}?",
                                     name, Show(t.as_ref())
                                 },
                             }
                             Err(Some(inner))
                         } else {
-                            Ok(None)
+                            Err(Some(Term1(Term(Record(retained)))))
                         }
                     }
                     t if ctx.is_thunk_term(t)? => Ok(None),
