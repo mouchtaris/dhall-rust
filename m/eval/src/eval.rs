@@ -117,13 +117,49 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 // Replace with inner expr
                 Err(Some(e))
             }
-            Term1(Term(FieldAccess(a, b))) => {
-                ctx = in_place_term(ctx, a)?;
-                match a.as_mut() {
+            Term1(Term(FieldAccess(t, name))) => {
+                ctx = in_place_term(ctx, t)?;
+                match t.as_mut() {
                     Record(fields) => {
-                        panic!()
+                        fields.retain(|(path, _)| path.front().map(|s| name == s).unwrap_or(false));
+
+                        let mut emerged = None;
+                        let mut retained = ast::Deq::new();
+                        ctx =
+                            fields
+                                .iter_mut()
+                                .fold(Ok(ctx), |ctx: Result<Ctx>, (path, val)| {
+                                    let ctx = in_scope(ctx?, val)?;
+
+                                    path.pop_front();
+                                    if path.is_empty() {
+                                        emerged = Some(val);
+                                    } else {
+                                        retained.push_back((mem::take(path), mem::take(val)));
+                                    }
+
+                                    Ok(ctx)
+                                })?;
+
+                        if let Some(inner) = emerged {
+                            let mut inner = ctx.unbox(inner);
+                            // replace with inner value
+                            match &mut inner {
+                                Term1(Term(Record(inner_fields))) => {
+                                    inner_fields.append(&mut retained);
+                                }
+                                other if retained.is_empty() => {}
+                                other => bail! {
+                                    "How to access {} from {}?",
+                                    name, Show(t.as_ref())
+                                },
+                            }
+                            Err(Some(inner))
+                        } else {
+                            Ok(None)
+                        }
                     }
-                    Var(n, s) if ctx.sym_table.is_thunk(n, *s)? => Ok(None), // thunk field access
+                    t if ctx.is_thunk_term(t)? => Ok(None),
                     other => panic!("{:?}", other),
                 }
             }
@@ -263,6 +299,8 @@ impl<'i> Context<'i> {
             def_thunk("Text");
             def_thunk("True");
             def_thunk("Type");
+            def_thunk("Optional");
+            def_thunk("List/reverse");
         }
     }
 
@@ -294,8 +332,9 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
-            Var(n, s) if self.sym_table.is_thunk(n, *s)? => true,
-            FieldAccess(t, _) if self.is_thunk_term(t)? => true,
+            Var(n, s) => self.sym_table.is_thunk(n, *s)?,
+            FieldAccess(t, _) => self.is_thunk_term(t)?,
+            Record(_) => false,
             other => panic!("How to know if thunk term? {:?} ", other,),
         })
     }
