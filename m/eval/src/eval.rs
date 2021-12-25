@@ -101,9 +101,22 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 }
                 Ok(None)
             }
+            Term1(Term(List(fields))) => {
+                for val in fields {
+                    ctx = in_scope(ctx, val)?;
+                }
+                Ok(None)
+            }
             Term1(Term(Integer(_, _))) => Ok(None),
             Term1(Term(Double(_))) => Ok(None),
             Term1(Term(Text(_, _))) => Ok(None),
+            Term1(Term(Expr(e))) => {
+                ctx = in_scope(ctx, e)?;
+                let e = ctx.unbox(e);
+
+                // Replace with inner expr
+                Err(Some(e))
+            }
             Term1(Term(FieldAccess(a, b))) => {
                 ctx = in_place_term(ctx, a)?;
                 match a.as_mut() {
@@ -113,10 +126,6 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     Var(n, s) if ctx.sym_table.is_thunk(n, *s)? => Ok(None), // thunk field access
                     other => panic!("{:?}", other),
                 }
-            }
-            Term1(Arrow(_, a, b)) => {
-                ctx = in_scope2(ctx, a, b)?;
-                Ok(None)
             }
             Term1(Ascribe(a, b)) => {
                 ctx = in_place_term1(ctx, a)?;
@@ -147,20 +156,40 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         }
                         _ => panic!("After-evaluation non lambda expression in substitution"),
                     },
-                    (Term(Var(n, s)), _) => {
-                        let info = ctx.sym_table.lookup(n, *s)?;
-                        if info.value.is_none() {
-                            // Normal
-                            Ok(None)
-                        } else {
-                            panic!("After-evaluation with non-thunk symbol")
-                        }
-                    }
-                    other => bail!("How to Evaluation {:?}", other),
+                    (t, _) if ctx.is_thunk_term1(t)? => Ok(None),
+                    other => panic!("How to Evaluation {:?}", other),
                 }
             }
-            Lambda(_, a, b) => {
+            Term1(Arrow(n, a, b)) => {
+                ctx = in_scope(ctx, a)?;
+
+                ctx.sym_table.enter_scope();
+                if let Some(name) = n {
+                    ctx.sym_table.add_thunk(name);
+                }
+                ctx = in_scope(ctx, b)?;
+                ctx.sym_table.exit_scope();
+
+                Ok(None)
+            }
+            Term1(IfThenElse(c, a, b)) => {
                 ctx = in_scope2(ctx, a, b)?;
+                ctx = in_scope(ctx, c)?;
+                match c.as_ref() {
+                    Term1(Term(Var("True", 0))) => Err(Some(ctx.unbox(a))),
+                    Term1(Term(Var("False", 0))) => Err(Some(ctx.unbox(b))),
+                    Term1(t1) if ctx.is_thunk_term1(t1)? => Ok(None),
+                    other => panic!("How to eval if-then-else? {:?}", other),
+                }
+            }
+            Lambda(name, a, b) => {
+                ctx = in_scope(ctx, a)?;
+
+                ctx.sym_table.enter_scope();
+                ctx.sym_table.add_thunk(name);
+                ctx = in_scope(ctx, b)?;
+                ctx.sym_table.exit_scope();
+
                 Ok(None)
             }
             other => {
@@ -207,8 +236,6 @@ impl<'i> Context<'i> {
         let Self { sym_table, .. } = self;
         sym_table.enter_scope();
 
-        log::warn!("TODO: Core-lib types [{} {}]", line!(), file!());
-
         fn n<'i>(n: &'i str) -> ast::Expr<'i> {
             ast::Expr::Term1(ast::Term1::Term(ast::Term::Var(n, 0)))
         }
@@ -217,8 +244,25 @@ impl<'i> Context<'i> {
             let mut def_thunk = |a| sym_table.add(a, None, None);
 
             // Install core
-            def_thunk("Type");
+            def_thunk("assert");
+            def_thunk("Bool");
+            def_thunk("Double");
+            def_thunk("False");
+            def_thunk("Integer");
+            def_thunk("Integer/clamp");
+            def_thunk("Integer/negate");
+            def_thunk("Integer/show");
             def_thunk("List");
+            def_thunk("List/build");
+            def_thunk("List/fold");
+            def_thunk("Natural");
+            def_thunk("Natural/even");
+            def_thunk("Natural/isZero");
+            def_thunk("Natural/show");
+            def_thunk("Natural/toInteger");
+            def_thunk("Text");
+            def_thunk("True");
+            def_thunk("Type");
         }
     }
 
@@ -244,6 +288,26 @@ impl<'i> Context<'i> {
             }
             None => Box::new(val),
         }
+    }
+
+    fn is_thunk_term(&self, t: &ast::Term) -> Result<bool> {
+        use ast::Term::*;
+
+        Ok(match t {
+            Var(n, s) if self.sym_table.is_thunk(n, *s)? => true,
+            FieldAccess(t, _) if self.is_thunk_term(t)? => true,
+            other => panic!("How to know if thunk term? {:?} ", other,),
+        })
+    }
+
+    fn is_thunk_term1(&self, t: &ast::Term1) -> Result<bool> {
+        use ast::Term1::*;
+
+        Ok(match t {
+            Term(t) => self.is_thunk_term(t)?,
+            Evaluation(t, _) => self.is_thunk_term1(t)?,
+            other => panic!("How to know if thunk term1? {:?}", other,),
+        })
     }
 }
 

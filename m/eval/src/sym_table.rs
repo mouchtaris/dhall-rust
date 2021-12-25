@@ -42,6 +42,10 @@ impl<'i> SymTable<'i> {
         v.typ = typ;
     }
 
+    pub fn add_thunk(&mut self, name: &'i str) {
+        self.add(name, None, None)
+    }
+
     pub fn lookup(&self, name: &str, scope: u16) -> Result<&Info<'i>> {
         for scope in self.scope.iter().skip(scope as usize) {
             if let Some(info) = scope.name_info.get(name) {
@@ -49,7 +53,7 @@ impl<'i> SymTable<'i> {
             }
         }
 
-        Err(format!("No found: {}", name).into())
+        Err(format!("Not found: {}", name).into())
     }
 
     pub fn is_thunk(&self, name: &str, scope: u16) -> Result<bool> {
