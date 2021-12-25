@@ -118,7 +118,19 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 Err(Some(e))
             }
             Term1(Term(FieldAccess(t, name))) => {
+                log::trace!(
+                    "{:4} Field access: t before: {}@{:?}",
+                    line!(),
+                    ctx.is_thunk_term(t)?,
+                    t
+                );
                 ctx = in_place_term(ctx, t)?;
+                log::trace!(
+                    "{:4} Field access: t after: {}@{:?}",
+                    line!(),
+                    ctx.is_thunk_term(t)?,
+                    t
+                );
                 match t.as_mut() {
                     Record(fields) => {
                         fields.retain(|(path, _)| path.front().map(|s| name == s).unwrap_or(false));
@@ -146,7 +158,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                     inner_fields.append(&mut retained);
                                 }
                                 _ if retained.is_empty() => {}
-                                _ => bail! {
+                                _ => panic! {
                                     "How to access {} from {}?",
                                     name, Show(t.as_ref())
                                 },
@@ -157,7 +169,11 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         }
                     }
                     t if ctx.is_thunk_term(t)? => Ok(None),
-                    other => panic!("{:?}", other),
+                    other => panic!(
+                        "Field Access of: {:?} {}",
+                        other,
+                        ctx.is_thunk_term(&other)?
+                    ),
                 }
             }
             Term1(Ascribe(a, b)) => {
@@ -191,6 +207,16 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     },
                     (t, _) if ctx.is_thunk_term1(t)? => Ok(None),
                     other => panic!("How to Evaluation {:?}", other),
+                }
+            }
+            Term1(Term(Merge(merge_fields, t))) => {
+                ctx = in_place_term(ctx, t.as_mut())?;
+                for (_, field) in merge_fields {
+                    ctx = in_scope(ctx, field)?;
+                }
+                match t {
+                    t if ctx.is_thunk_term(t)? => Ok(None),
+                    o => panic!("How to merge {:?}", o),
                 }
             }
             Term1(Arrow(n, a, b)) => {
@@ -233,7 +259,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     .last()
                     .map(|(i, _)| i)
                     .unwrap_or(code.len());
-                bail!("How to eval {}\n{:?}", &code[..end], other)
+                panic!("How to eval {}\n{:?}", &code[..end], other)
             }
         };
 
@@ -297,7 +323,10 @@ impl<'i> Context<'i> {
             def_thunk("True");
             def_thunk("Type");
             def_thunk("Optional");
+            def_thunk("None");
             def_thunk("List/reverse");
+            def_thunk("Text/replace");
+            def_thunk("Some");
         }
     }
 
@@ -332,6 +361,9 @@ impl<'i> Context<'i> {
             Var(n, s) => self.sym_table.is_thunk(n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
             Record(_) => false,
+            Merge(_, t) => self.is_thunk_term(t)?,
+            Expr(e) => self.is_thunk_expr(e)?,
+            TypeEnum(_) => true,
             other => panic!("How to know if thunk term? {:?} ", other,),
         })
     }
@@ -342,7 +374,17 @@ impl<'i> Context<'i> {
         Ok(match t {
             Term(t) => self.is_thunk_term(t)?,
             Evaluation(t, _) => self.is_thunk_term1(t)?,
+            Operation(a, _, b) => self.is_thunk_term1(a)? || self.is_thunk_term1(b)?,
             other => panic!("How to know if thunk term1? {:?}", other,),
+        })
+    }
+
+    fn is_thunk_expr(&self, t: &ast::Expr) -> Result<bool> {
+        use ast::Expr::*;
+
+        Ok(match t {
+            Term1(t1) => self.is_thunk_term1(t1)?,
+            other => panic!("How to know if thunk expr? {:?}", other,),
         })
     }
 }

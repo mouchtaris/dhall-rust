@@ -3,7 +3,7 @@ use ast::Expr;
 
 pub type Value<'i> = Option<Expr<'i>>;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Info<'i> {
     pub value: Value<'i>,
     pub typ: Value<'i>,
@@ -31,26 +31,50 @@ impl<'i> SymTable<'i> {
     }
 
     pub fn add(&mut self, name: &'i str, typ: Value<'i>, val: Value<'i>) {
-        let v = self
-            .scope
-            .front_mut()
-            .unwrap()
-            .name_info
-            .entry(name)
-            .or_default();
-        v.value = val;
-        v.typ = typ;
+        let scope_id = self.scope.len() - 1;
+        let this_scope = self.scope.front_mut().unwrap();
+        let nfo_id = this_scope.name_info.len();
+        let info = Info { value: val, typ };
+        log::debug!(
+            "{:4} Define {}.{}.{}: {:?}",
+            line!(),
+            name,
+            scope_id,
+            nfo_id,
+            info
+        );
+
+        if let Some(prev_info) = this_scope.name_info.insert(name, info) {
+            log::trace!(
+                "{:4} Shadowing {}.{}.{}: {:?}",
+                line!(),
+                name,
+                scope_id,
+                nfo_id,
+                prev_info
+            );
+        }
     }
 
     pub fn add_thunk(&mut self, name: &'i str) {
         self.add(name, None, None)
     }
 
-    pub fn lookup(&self, name: &str, scope: u16) -> Result<&Info<'i>> {
-        for scope in self.scope.iter().skip(scope as usize) {
+    pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
+        let mut depth = nscope;
+        for scope in self.scope.iter().skip(nscope as usize) {
             if let Some(info) = scope.name_info.get(name) {
+                log::debug!(
+                    "{:4} Lookup {}.{}.{}: {:?}",
+                    line!(),
+                    name,
+                    nscope,
+                    depth,
+                    info
+                );
                 return Ok(info);
             }
+            depth += 1;
         }
 
         Err(format!("Not found: {}", name).into())
