@@ -1,4 +1,4 @@
-use super::{bail, AsImm, Error, Result, SymTable};
+use super::{bail, AsImm, Result, SymTable};
 use show::Show;
 use std::mem;
 
@@ -79,13 +79,10 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = val.eval(ctx)?;
                 Ok(Some(val.as_mut()))
             }
-            Term1(Term(Var(name, scope))) => {
-                let scope = u8::from_str_radix(scope, 10).unwrap();
-                match ctx.sym_table.lookup(name, scope) {
-                    None => Ok(None),
-                    Some(info) => Err(info.value.as_ref().map(|e| e.to_owned())),
-                }
-            }
+            Term1(Term(Var(name, scope))) => match &ctx.sym_table.lookup(name, *scope)?.value {
+                None => Ok(None),
+                Some(val) => Err(Some(val.to_owned())),
+            },
             Term1(Term(TypeRecord(fields))) => {
                 for (_, val) in fields {
                     ctx = in_scope(ctx, val)?;
@@ -107,6 +104,16 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             Term1(Term(Integer(_, _))) => Ok(None),
             Term1(Term(Double(_))) => Ok(None),
             Term1(Term(Text(_, _))) => Ok(None),
+            Term1(Term(FieldAccess(a, b))) => {
+                ctx = in_place_term(ctx, a)?;
+                match a.as_mut() {
+                    Record(fields) => {
+                        panic!()
+                    }
+                    Var(n, s) if ctx.sym_table.is_thunk(n, *s)? => Ok(None), // thunk field access
+                    other => panic!("{:?}", other),
+                }
+            }
             Term1(Arrow(_, a, b)) => {
                 ctx = in_scope2(ctx, a, b)?;
                 Ok(None)
@@ -129,7 +136,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     (Term(Expr(e)), x) => match e.as_mut() {
                         Lambda(n, _, b) => {
                             match mem::take(x) {
-                                ast::Term::Var(m, "0") if *n == m => (),
+                                ast::Term::Var(m, 0) if *n == m => (),
                                 x => {
                                     let x = ast::Expr::Term1(ast::Term1::Term(x));
                                     ctx.sym_table.add(n, None, Some(x));
@@ -141,11 +148,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         _ => panic!("After-evaluation non lambda expression in substitution"),
                     },
                     (Term(Var(n, s)), _) => {
-                        let s_ = u8::from_str_radix(s, 10).unwrap();
-                        let info = ctx
-                            .sym_table
-                            .lookup(n, s_)
-                            .ok_or(Error::from(format!("Name not found: {}", n)))?;
+                        let info = ctx.sym_table.lookup(n, *s)?;
                         if info.value.is_none() {
                             // Normal
                             Ok(None)
@@ -207,7 +210,7 @@ impl<'i> Context<'i> {
         log::warn!("TODO: Core-lib types [{} {}]", line!(), file!());
 
         fn n<'i>(n: &'i str) -> ast::Expr<'i> {
-            ast::Expr::Term1(ast::Term1::Term(ast::Term::Var(n, "0")))
+            ast::Expr::Term1(ast::Term1::Term(ast::Term::Var(n, 0)))
         }
 
         {

@@ -22,7 +22,7 @@ pub mod new {
         impl_report! {
         var -> Term 's
             : (&'s str, &'s str)
-            = |(name, scope)| Term::Var(name, scope) }
+            = |(name, scope)| Term::Var(name, u16::from_str_radix(scope, 10).unwrap()) }
 
         impl_report! {
         field_access -> Term 's

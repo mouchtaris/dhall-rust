@@ -90,16 +90,13 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             Embed(code) => writeln!(f, "{}", code),
             &Var(name, n) => {
                 let ear = if lex::is_keyword(name) { "`" } else { "" };
-                let at = if n != &"0" { "@" } else { "" };
-                let scope = if n == &"0" { "" } else { n };
-                write!(
-                    f,
-                    "{ear}{name}{ear}{at}{scope}",
-                    ear = ear,
-                    name = name,
-                    at = at,
-                    scope = scope
-                )?;
+
+                write!(f, "{}{}", ear, name)?;
+                if *n != 0 {
+                    write!(f, "@{}", n)?;
+                }
+                write!(f, "{}", ear)?;
+
                 Ok(())
             }
             Double(n) => write!(f, "{}", n),

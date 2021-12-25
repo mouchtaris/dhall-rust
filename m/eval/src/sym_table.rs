@@ -1,4 +1,4 @@
-use super::{Deq, Map};
+use super::{Deq, Map, Result};
 use ast::Expr;
 
 pub type Value<'i> = Option<Expr<'i>>;
@@ -42,19 +42,27 @@ impl<'i> SymTable<'i> {
         v.typ = typ;
     }
 
-    pub fn lookup(&self, name: &str, mut scope: u8) -> Option<&Info<'i>> {
-        for Scope { name_info } in &self.scope {
-            if scope > 0 {
-                scope -= 1;
-                continue;
-            }
-
-            let cell = name_info.get(name);
-
-            if cell.is_some() {
-                return cell;
+    pub fn lookup(&self, name: &str, scope: u16) -> Result<&Info<'i>> {
+        for scope in self.scope.iter().skip(scope as usize) {
+            if let Some(info) = scope.name_info.get(name) {
+                return Ok(info);
             }
         }
-        None
+
+        Err(format!("No found: {}", name).into())
+    }
+
+    pub fn is_thunk(&self, name: &str, scope: u16) -> Result<bool> {
+        Ok(self.lookup(name, scope)?.value.is_none())
+    }
+
+    pub fn copy_value(&self, name: &str, scope: u16) -> Result<ast::Expr<'i>> {
+        let info = self.lookup(name, scope)?;
+        let val = info
+            .value
+            .as_ref()
+            .map(<_>::to_owned)
+            .ok_or_else(|| format!("Name is a thunk (has no value) {}@{}", name, scope))?;
+        Ok(val)
     }
 }
