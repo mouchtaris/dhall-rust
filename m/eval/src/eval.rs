@@ -313,6 +313,7 @@ impl<'i> Context<'i> {
             def_thunk("Integer/clamp");
             def_thunk("Integer/negate");
             def_thunk("Integer/show");
+            def_thunk("Kind");
             def_thunk("List");
             def_thunk("List/build");
             def_thunk("List/fold");
