@@ -133,7 +133,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
             Merge(term, val) => {
                 write!(
                     f,
-                    "merge {} {}",
+                    "(merge {} {})",
                     Show(ShowList(SHOW_LIST_STYLE_REC, term)),
                     Show(val.as_ref())
                 )
