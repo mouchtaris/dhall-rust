@@ -173,6 +173,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                             Err(Some(Term1(Term(Record(retained)))))
                         }
                     }
+                    TypeEnum(_) => Ok(None),
                     t if ctx.is_thunk_term(t)? => Ok(None),
                     other => panic!(
                         "Field Access of: {:?} {}",
@@ -210,16 +211,74 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         }
                         _ => panic!("After-evaluation non lambda expression in substitution"),
                     },
+                    (Term(FieldAccess(t, s)), x) => {
+                        match t.as_mut() {
+                            TypeEnum(_) => Ok(None), // Thunk expr
+                            o => panic!("After-evaluation non field accessible: {:?}", t),
+                        }
+                    }
                     (t, _) if ctx.is_thunk_term1(t)? => Ok(None),
                     other => panic!("How to Evaluation {:?}", other),
                 }
             }
-            Term1(Term(Merge(merge_fields, t))) => {
+            Term1(Term(Merge(merge_table, t))) => {
                 ctx = in_place_term(ctx, t.as_mut())?;
-                for (_, field) in merge_fields {
-                    ctx = in_scope(ctx, field)?;
-                }
-                match t {
+                match t.as_mut() {
+                    Expr(e) => match e.as_mut() {
+                        Term1(Evaluation(eval_f, eval_a)) => match eval_f.as_mut() {
+                            Term(FieldAccess(fields_t, fields_n)) => {
+                                match fields_t.as_mut() {
+                                    TypeEnum(type_enum) => {
+                                        // This is in fact a type-enum-variant construction -- the
+                                        // only thing expected to evalluate as merge's argument.
+                                        //
+                                        //  < a : Natural >.a 12
+                                        //
+                                        // In typeless dust, we actually only care for the field
+                                        // name...
+                                        let _ = type_enum;
+                                        // And look it up in the merge table
+                                        let mut mti = merge_table.iter_mut();
+                                        loop {
+                                            match mti.next() {
+                                                Some((name, data_handler)) => {
+                                                    // Path here is a hack, only care for the first/only
+                                                    // element:
+                                                    let name = name.front().unwrap();
+                                                    if fields_n == name {
+                                                        ctx = in_scope(ctx, data_handler)?;
+
+                                                        // Call the merge handler with the variant data.
+                                                        match data_handler.as_mut() {
+                                                            l @ Lambda(_, _, _) => {
+                                                                let data_handler = ctx.rebox(Term(Expr(mem::take(data_handler))));
+                                                                let eval_a = mem::take(eval_a);
+                                                                let mut re_eval = Term1(Evaluation(data_handler, eval_a));
+                                                                log::trace!("Merge result re-evaluation: {:?}", re_eval);
+                                                                ctx = in_scope(ctx, &mut re_eval)?;
+                                                                break Err(Some(re_eval))
+                                                            }
+                                                            o => panic!("Expecting Lambda for merge handler data: {:?}", o),
+                                                        }
+                                                    }
+                                                }
+                                                None => {
+                                                    bail!(
+                                                        "Field not found: {} in {:?}",
+                                                        fields_n,
+                                                        type_enum
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                    o => panic!("How to merge {:?}", o),
+                                }
+                            }
+                            o => panic!("How to merge {:?}", o),
+                        },
+                        o => panic!("How to merge {:?}", o),
+                    },
                     t if ctx.is_thunk_term(t)? => Ok(None),
                     o => panic!("How to merge {:?}", o),
                 }
@@ -368,7 +427,7 @@ impl<'i> Context<'i> {
             Record(_) => false,
             Merge(_, t) => self.is_thunk_term(t)?,
             Expr(e) => self.is_thunk_expr(e)?,
-            TypeEnum(_) => true,
+            TypeEnum(_) => false,
             other => panic!("How to know if thunk term? {:?} ", other,),
         })
     }

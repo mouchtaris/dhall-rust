@@ -118,7 +118,7 @@ impl<'i> SymTable<'i> {
                         name,
                         starting_scope_id,
                         nscope,
-                        in_scope_id,
+                        in_scope_id - 1,
                         info
                     );
                     return Ok(info);
@@ -128,7 +128,7 @@ impl<'i> SymTable<'i> {
             in_scope_id -= 1;
         }
 
-        Err(format!("Not found: {}", name).into())
+        panic!("[ERROR] Not found: {}", name)
     }
 
     pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
