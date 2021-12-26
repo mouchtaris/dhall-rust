@@ -80,11 +80,26 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = val.eval(ctx)?;
                 Ok(Some(val.as_mut()))
             }
-            Term1(Term(Var(name, scope, None))) => match &ctx.sym_table.lookup(name, *scope)?.value
-            {
-                None => Ok(None), // thunk value - ok
-                Some(val) => Err(Some(val.to_owned())),
-            },
+            Term1(Term(Var(name, scope, scope_fix))) => {
+                // Fix this name to the current active scope.
+                // Prevents destruction like
+                //
+                //    let Head = { head : Bool }
+                //
+                //    in  λ(ls : Head) →
+                //
+                //      let ls = ls.head            -- Scope danger!!!
+                //
+                //      in ls { head = True }
+                //
+                let info = ctx.sym_table.lookup(name, *scope)?;
+                *scope_fix = Some(info.scope_id);
+
+                match &info.value {
+                    None => Ok(None), // thunk value - ok
+                    Some(val) => Err(Some(val.to_owned())),
+                }
+            }
             Term1(Term(TypeRecord(fields))) => {
                 for (_, val) in fields {
                     ctx = in_scope(ctx, val)?;
@@ -292,6 +307,7 @@ impl<'i> Context<'i> {
             def_thunk("assert");
             def_thunk("Bool");
             def_thunk("Double");
+            def_thunk("Double/show");
             def_thunk("False");
             def_thunk("Integer");
             def_thunk("Integer/clamp");
@@ -300,19 +316,21 @@ impl<'i> Context<'i> {
             def_thunk("List");
             def_thunk("List/build");
             def_thunk("List/fold");
+            def_thunk("List/reverse");
             def_thunk("Natural");
             def_thunk("Natural/even");
             def_thunk("Natural/isZero");
             def_thunk("Natural/show");
             def_thunk("Natural/toInteger");
+            def_thunk("None");
+            def_thunk("Optional");
+            def_thunk("Some");
             def_thunk("Text");
+            def_thunk("Text/replace");
+            def_thunk("Text/show");
+            def_thunk("toMap");
             def_thunk("True");
             def_thunk("Type");
-            def_thunk("Optional");
-            def_thunk("None");
-            def_thunk("List/reverse");
-            def_thunk("Text/replace");
-            def_thunk("Some");
         }
     }
 
@@ -344,7 +362,7 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
-            Var(n, s, None) => self.sym_table.is_thunk(n, *s)?,
+            Var(n, s, Some(f)) => self.sym_table.is_thunk1(*f, n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
             Record(_) => false,
             Merge(_, t) => self.is_thunk_term(t)?,

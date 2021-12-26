@@ -7,13 +7,13 @@ pub type Value<'i> = Option<Expr<'i>>;
 pub struct Info<'i> {
     pub value: Value<'i>,
     pub typ: Value<'i>,
+    pub scope_id: usize,
 }
 
 #[derive(Debug)]
 pub struct Scope<'i> {
     name_info: Map<&'i str, Info<'i>>,
     is_shadow: bool,
-    scope_id: usize,
 }
 
 #[derive(Default)]
@@ -36,7 +36,6 @@ impl<'i> SymTable<'i> {
         let scope = Scope {
             name_info: <_>::default(),
             is_shadow,
-            scope_id: self.next_scope_id(),
         };
 
         log::trace!("enter {:?}", scope);
@@ -64,7 +63,11 @@ impl<'i> SymTable<'i> {
         let scope_id = self.scope_id();
         let this_scope = self.scope.front_mut().unwrap();
         let nfo_id = this_scope.name_info.len();
-        let info = Info { value: val, typ };
+        let info = Info {
+            value: val,
+            typ,
+            scope_id,
+        };
         log::debug!(
             "{:4} Define {}.{}.{}: {:?}",
             line!(),
@@ -96,18 +99,26 @@ impl<'i> SymTable<'i> {
         name: &str,
         mut nscope: u16,
     ) -> Result<&Info<'i>> {
-        let mut in_scope_id = self.scope.len();
+        log::trace!(
+            "{:4} ({}) Lookup {} >={} @{}",
+            line!(),
+            self.scope_id(),
+            name,
+            starting_scope_id,
+            nscope,
+        );
 
+        let mut in_scope_id = self.scope.len();
         for scope in self.scope.iter().skip(self.scope_id() - starting_scope_id) {
             if let Some(info) = scope.name_info.get(name) {
                 if nscope == 0 {
                     log::debug!(
-                        "{:4} Lookup {} >={} @{} =>{}: {:?}",
+                        "{:4} Lookup {} >={} @{}  ->{} {:?}",
                         line!(),
                         name,
-                        nscope,
                         starting_scope_id,
-                        in_scope_id - 1,
+                        nscope,
+                        in_scope_id,
                         info
                     );
                     return Ok(info);
@@ -122,6 +133,13 @@ impl<'i> SymTable<'i> {
 
     pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
         self.lookup_from(self.scope_id(), name, nscope)
+    }
+
+    pub fn is_thunk1(&self, starting_scope_id: usize, name: &str, nscope: u16) -> Result<bool> {
+        Ok(self
+            .lookup_from(starting_scope_id, name, nscope)?
+            .value
+            .is_none())
     }
 
     pub fn is_thunk(&self, name: &str, nscope: u16) -> Result<bool> {
