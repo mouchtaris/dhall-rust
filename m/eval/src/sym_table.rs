@@ -9,9 +9,11 @@ pub struct Info<'i> {
     pub typ: Value<'i>,
 }
 
-#[derive(Default)]
+#[derive(Debug)]
 pub struct Scope<'i> {
     name_info: Map<&'i str, Info<'i>>,
+    is_shadow: bool,
+    scope_id: usize,
 }
 
 #[derive(Default)]
@@ -22,16 +24,44 @@ pub struct SymTable<'i> {
 impl<'i> SymTable<'i> {
     pub const NONE: &'i Option<ast::Expr<'i>> = &None;
 
+    pub fn next_scope_id(&self) -> usize {
+        self.scope.len()
+    }
+
+    pub fn scope_id(&self) -> usize {
+        self.next_scope_id() - 1
+    }
+
+    pub fn enter_scope1(&mut self, is_shadow: bool) {
+        let scope = Scope {
+            name_info: <_>::default(),
+            is_shadow,
+            scope_id: self.next_scope_id(),
+        };
+
+        log::trace!("enter {:?}", scope);
+        self.scope.push_front(scope);
+    }
+
     pub fn enter_scope(&mut self) {
-        self.scope.push_front(<_>::default())
+        self.enter_scope1(false)
+    }
+
+    pub fn enter_shadow(&mut self) {
+        self.enter_scope1(true)
     }
 
     pub fn exit_scope(&mut self) {
-        self.scope.pop_front();
+        loop {
+            if !self.scope.pop_front().map(|s| s.is_shadow).unwrap_or(false) {
+                break;
+            }
+        }
+        log::trace!("exit to {}", self.scope_id());
     }
 
     pub fn add(&mut self, name: &'i str, typ: Value<'i>, val: Value<'i>) {
-        let scope_id = self.scope.len() - 1;
+        let scope_id = self.scope_id();
         let this_scope = self.scope.front_mut().unwrap();
         let nfo_id = this_scope.name_info.len();
         let info = Info { value: val, typ };
@@ -60,28 +90,42 @@ impl<'i> SymTable<'i> {
         self.add(name, None, None)
     }
 
-    pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
-        let mut depth = nscope;
-        for scope in self.scope.iter().skip(nscope as usize) {
+    pub fn lookup_from(
+        &self,
+        starting_scope_id: usize,
+        name: &str,
+        mut nscope: u16,
+    ) -> Result<&Info<'i>> {
+        let mut in_scope_id = self.scope.len();
+
+        for scope in self.scope.iter().skip(self.scope_id() - starting_scope_id) {
             if let Some(info) = scope.name_info.get(name) {
-                log::debug!(
-                    "{:4} Lookup {}.{}.{}: {:?}",
-                    line!(),
-                    name,
-                    nscope,
-                    depth,
-                    info
-                );
-                return Ok(info);
+                if nscope == 0 {
+                    log::debug!(
+                        "{:4} Lookup {} >={} @{} =>{}: {:?}",
+                        line!(),
+                        name,
+                        nscope,
+                        starting_scope_id,
+                        in_scope_id - 1,
+                        info
+                    );
+                    return Ok(info);
+                }
+                nscope -= 1;
             }
-            depth += 1;
+            in_scope_id -= 1;
         }
 
         Err(format!("Not found: {}", name).into())
     }
 
-    pub fn is_thunk(&self, name: &str, scope: u16) -> Result<bool> {
-        Ok(self.lookup(name, scope)?.value.is_none())
+    pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
+        self.lookup_from(self.scope_id(), name, nscope)
+    }
+
+    pub fn is_thunk(&self, name: &str, nscope: u16) -> Result<bool> {
+        Ok(self.lookup(name, nscope)?.value.is_none())
     }
 
     pub fn copy_value(&self, name: &str, scope: u16) -> Result<ast::Expr<'i>> {

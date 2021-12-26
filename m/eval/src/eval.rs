@@ -73,14 +73,16 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     };
                     let val = ctx.unbox(val);
 
+                    ctx.sym_table.enter_shadow();
                     ctx.sym_table.add(name, typ, Some(val));
                 }
 
                 ctx = val.eval(ctx)?;
                 Ok(Some(val.as_mut()))
             }
-            Term1(Term(Var(name, scope))) => match &ctx.sym_table.lookup(name, *scope)?.value {
-                None => Ok(None),
+            Term1(Term(Var(name, scope, None))) => match &ctx.sym_table.lookup(name, *scope)?.value
+            {
+                None => Ok(None), // thunk value - ok
                 Some(val) => Err(Some(val.to_owned())),
             },
             Term1(Term(TypeRecord(fields))) => {
@@ -118,19 +120,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 Err(Some(e))
             }
             Term1(Term(FieldAccess(t, name))) => {
-                log::trace!(
-                    "{:4} Field access: t before: {}@{:?}",
-                    line!(),
-                    ctx.is_thunk_term(t)?,
-                    t
-                );
                 ctx = in_place_term(ctx, t)?;
-                log::trace!(
-                    "{:4} Field access: t after: {}@{:?}",
-                    line!(),
-                    ctx.is_thunk_term(t)?,
-                    t
-                );
                 match t.as_mut() {
                     Record(fields) => {
                         fields.retain(|(path, _)| path.front().map(|s| name == s).unwrap_or(false));
@@ -194,7 +184,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     (Term(Expr(e)), x) => match e.as_mut() {
                         Lambda(n, _, b) => {
                             match mem::take(x) {
-                                ast::Term::Var(m, 0) if *n == m => (),
+                                ast::Term::Var(m, 0, None) if *n == m => (),
                                 x => {
                                     let x = ast::Expr::Term1(ast::Term1::Term(x));
                                     ctx.sym_table.add(n, None, Some(x));
@@ -235,8 +225,8 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = in_scope2(ctx, a, b)?;
                 ctx = in_scope(ctx, c)?;
                 match c.as_ref() {
-                    Term1(Term(Var("True", 0))) => Err(Some(ctx.unbox(a))),
-                    Term1(Term(Var("False", 0))) => Err(Some(ctx.unbox(b))),
+                    Term1(Term(Var("True", 0, _))) => Err(Some(ctx.unbox(a))),
+                    Term1(Term(Var("False", 0, _))) => Err(Some(ctx.unbox(b))),
                     Term1(t1) if ctx.is_thunk_term1(t1)? => Ok(None),
                     other => panic!("How to eval if-then-else? {:?}", other),
                 }
@@ -294,10 +284,6 @@ impl<'i> Context<'i> {
     fn init(&mut self) {
         let Self { sym_table, .. } = self;
         sym_table.enter_scope();
-
-        fn n<'i>(n: &'i str) -> ast::Expr<'i> {
-            ast::Expr::Term1(ast::Term1::Term(ast::Term::Var(n, 0)))
-        }
 
         {
             let mut def_thunk = |a| sym_table.add(a, None, None);
@@ -358,7 +344,7 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
-            Var(n, s) => self.sym_table.is_thunk(n, *s)?,
+            Var(n, s, None) => self.sym_table.is_thunk(n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
             Record(_) => false,
             Merge(_, t) => self.is_thunk_term(t)?,

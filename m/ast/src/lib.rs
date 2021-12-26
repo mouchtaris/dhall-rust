@@ -46,7 +46,7 @@ pub enum Term<'i> {
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
     Path(TermPath<'i>),
-    Var(Ident<'i>, u16),
+    Var(Ident<'i>, u16, Option<usize>),
     Text(u8, Deq<TextEntry<'i>>),
     List(Deq<Val<'i>>),
     Record(RecordData<'i>),
@@ -274,7 +274,7 @@ pub fn var_expr(s: &str) -> Expr {
         "Sort" => "`Sort`",
         s => s,
     };
-    Expr::Term1(Term1::Term(Term::Var(s, 0)))
+    Expr::Term1(Term1::Term(Term::Var(s, 0, None)))
 }
 
 impl<'i> Default for Term<'i> {
