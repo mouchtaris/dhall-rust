@@ -12,29 +12,9 @@ pub trait Eval<'i> {
     fn eval(&mut self, ctx: Ctx<'i>) -> Result<Ctx<'i>>;
 }
 
-fn in_scope<'i, A>(mut ctx: Ctx<'i>, a: &mut A) -> R<'i>
-where
-    A: Eval<'i>,
-{
-    ctx.sym_table.enter_scope();
-    ctx = a.eval(ctx)?;
-    ctx.sym_table.exit_scope();
-    Ok(ctx)
-}
-
-fn in_scope2<'i, A, B>(mut ctx: Ctx<'i>, a: &mut A, b: &mut B) -> R<'i>
-where
-    A: Eval<'i>,
-    B: Eval<'i>,
-{
-    ctx = in_scope(ctx, a)?;
-    ctx = in_scope(ctx, b)?;
-    Ok(ctx)
-}
-
 fn in_place_term1<'i>(mut ctx: Ctx<'i>, a: &mut ast::Term1<'i>) -> R<'i> {
     let mut e: ast::Expr = mem::take(a).into();
-    ctx = in_scope(ctx, &mut e)?;
+    ctx = e.eval(ctx)?;
 
     *a = match e {
         ast::Expr::Term1(t1) => t1,
@@ -45,7 +25,7 @@ fn in_place_term1<'i>(mut ctx: Ctx<'i>, a: &mut ast::Term1<'i>) -> R<'i> {
 
 fn in_place_term<'i>(mut ctx: Ctx<'i>, a: &mut ast::Term<'i>) -> R<'i> {
     let mut e: ast::Expr = mem::take(a).into();
-    ctx = in_scope(ctx, &mut e)?;
+    ctx = e.eval(ctx)?;
 
     *a = match e {
         ast::Expr::Term1(ast::Term1::Term(t)) => t,
@@ -64,8 +44,11 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
         use ast::{Expr::*, Term::*, Term1::*};
         let norm = match value {
             Let(defs, val) => {
+                ctx.sym_table.mark_scope();
+
                 for (name, typ, val) in defs {
-                    ctx = in_scope2(ctx, typ, val)?;
+                    ctx = typ.eval(ctx)?;
+                    ctx = val.eval(ctx)?;
 
                     let typ = match typ {
                         Some(b) => Some(mem::take(b.as_mut())),
@@ -73,27 +56,31 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     };
                     let val = ctx.unbox(val);
 
-                    ctx.sym_table.enter_shadow();
+                    ctx.sym_table.enter_scope();
                     ctx.sym_table.add(name, typ, Some(val));
                 }
 
                 ctx = val.eval(ctx)?;
+                ctx.sym_table.return_to_marked_scope();
                 Ok(Some(val.as_mut()))
             }
             Term1(Term(Var(name, scope, scope_fix))) => {
-                // Fix this name to the current active scope.
-                // Prevents destruction like
-                //
-                //    let Head = { head : Bool }
-                //
-                //    in  λ(ls : Head) →
-                //
-                //      let ls = ls.head            -- Scope danger!!!
-                //
-                //      in ls { head = True }
-                //
-                let info = ctx.sym_table.lookup(name, *scope)?;
-                *scope_fix = Some(info.scope_id);
+                log::trace!(
+                    "{:4} eval Var {} @{} >{:?}",
+                    line!(),
+                    name,
+                    scope,
+                    scope_fix
+                );
+
+                let info = match scope_fix {
+                    None => {
+                        let info = ctx.sym_table.lookup(name, *scope)?;
+                        log::trace!("{:4} Offset {:?}/{:?}", line!(), name, scope,);
+                        info
+                    }
+                    Some(soff) => ctx.sym_table.lookup_from_offset(*soff, name)?,
+                };
 
                 match &info.value {
                     None => Ok(None), // thunk value - ok
@@ -102,25 +89,25 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             }
             Term1(Term(TypeRecord(fields))) => {
                 for (_, val) in fields {
-                    ctx = in_scope(ctx, val)?;
+                    ctx = val.eval(ctx)?;
                 }
                 Ok(None)
             }
             Term1(Term(TypeEnum(fields))) => {
                 for (_, typ) in fields {
-                    ctx = in_scope(ctx, typ)?;
+                    ctx = typ.eval(ctx)?;
                 }
                 Ok(None)
             }
             Term1(Term(Record(fields))) => {
                 for (_, val) in fields {
-                    ctx = in_scope(ctx, val)?;
+                    ctx = val.eval(ctx)?;
                 }
                 Ok(None)
             }
             Term1(Term(List(fields))) => {
                 for val in fields {
-                    ctx = in_scope(ctx, val)?;
+                    ctx = val.eval(ctx)?;
                 }
                 Ok(None)
             }
@@ -128,7 +115,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             Term1(Term(Double(_))) => Ok(None),
             Term1(Term(Text(_, _))) => Ok(None),
             Term1(Term(Expr(e))) => {
-                ctx = in_scope(ctx, e)?;
+                ctx = e.eval(ctx)?;
                 let e = ctx.unbox(e);
 
                 // Replace with inner expr
@@ -145,7 +132,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         let mut retained = ast::Deq::new();
 
                         for (path, field) in &mut parafields {
-                            ctx = in_scope(ctx, field)?;
+                            ctx = field.eval(ctx)?;
 
                             path.pop_front();
                             if path.is_empty() {
@@ -184,7 +171,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             }
             Term1(Ascribe(a, b)) => {
                 ctx = in_place_term1(ctx, a)?;
-                ctx = in_scope(ctx, b)?;
+                ctx = b.eval(ctx)?;
                 Ok(None)
             }
             Term1(Operation(a, _, b)) => {
@@ -195,34 +182,54 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             Term1(Evaluation(f, x)) => {
                 ctx = in_place_term1(ctx, f)?;
                 ctx = in_place_term(ctx, x)?;
+                log::trace!(
+                    "{:4} eval Evaluation( {} , {} )",
+                    line!(),
+                    Show(f.as_ref()),
+                    Show(&*x)
+                );
 
                 match (f.as_mut(), x) {
                     (Term(Expr(e)), x) => match e.as_mut() {
-                        Lambda(n, _, b) => {
-                            match mem::take(x) {
-                                ast::Term::Var(m, 0, None) if *n == m => (),
+                        Lambda(n, t, b) => {
+                            let x: ast::Term = mem::take(x);
+                            ctx.sym_table.enter_scope();
+                            match x {
+                                ast::Term::Var(m, 0, None) if *n == m => {
+                                    log::trace!("{:4} Evaluation: skip defining {}", line!(), m);
+                                }
                                 x => {
                                     let x = ast::Expr::Term1(ast::Term1::Term(x));
                                     ctx.sym_table.add(n, None, Some(x));
                                 }
                             }
+                            ctx = t.eval(ctx)?;
                             ctx = b.eval(ctx)?;
+                            ctx.sym_table.exit_scope();
                             Err(Some(ctx.unbox(b)))
                         }
                         _ => panic!("After-evaluation non lambda expression in substitution"),
                     },
-                    (Term(FieldAccess(t, s)), x) => {
-                        match t.as_mut() {
-                            TypeEnum(_) => Ok(None), // Thunk expr
-                            o => panic!("After-evaluation non field accessible: {:?}", t),
-                        }
-                    }
+                    (Term(FieldAccess(t, _)), _) => match t.as_mut() {
+                        t if ctx.is_thunk_term(t)? => Ok(None),
+                        o => panic!("After-evaluation non field accessible: {:?}", o),
+                    },
                     (t, _) if ctx.is_thunk_term1(t)? => Ok(None),
                     other => panic!("How to Evaluation {:?}", other),
                 }
+                .map(|r| {
+                    log::trace!("{:4} eval Evaluation => {:?}", line!(), r);
+                    r
+                })
             }
             Term1(Term(Merge(merge_table, t))) => {
                 ctx = in_place_term(ctx, t.as_mut())?;
+                log::trace!(
+                    "{:4} eval Merge ( {:?} , {} )",
+                    line!(),
+                    merge_table,
+                    Show(t.as_ref())
+                );
                 match t.as_mut() {
                     Expr(e) => match e.as_mut() {
                         Term1(Evaluation(eval_f, eval_a)) => match eval_f.as_mut() {
@@ -242,20 +249,19 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                         loop {
                                             match mti.next() {
                                                 Some((name, data_handler)) => {
-                                                    // Path here is a hack, only care for the first/only
-                                                    // element:
+                                                    ctx = data_handler.eval(ctx)?;
+
+                                                    // Only care for the first/only element:
                                                     let name = name.front().unwrap();
                                                     if fields_n == name {
-                                                        ctx = in_scope(ctx, data_handler)?;
-
                                                         // Call the merge handler with the variant data.
                                                         match data_handler.as_mut() {
-                                                            l @ Lambda(_, _, _) => {
+                                                            Lambda(_, _, _) => {
                                                                 let data_handler = ctx.rebox(Term(Expr(mem::take(data_handler))));
                                                                 let eval_a = mem::take(eval_a);
                                                                 let mut re_eval = Term1(Evaluation(data_handler, eval_a));
                                                                 log::trace!("Merge result re-evaluation: {:?}", re_eval);
-                                                                ctx = in_scope(ctx, &mut re_eval)?;
+                                                                ctx = re_eval.eval(ctx)?;
                                                                 break Err(Some(re_eval))
                                                             }
                                                             o => panic!("Expecting Lambda for merge handler data: {:?}", o),
@@ -272,32 +278,41 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                             }
                                         }
                                     }
-                                    o => panic!("How to merge {:?}", o),
+                                    o => panic!("Merge expression has to evaluate to an enum-type construction: Evaluation(FiledAccess(TypeEnum(...), ...), ...): {:?}", o),
                                 }
                             }
-                            o => panic!("How to merge {:?}", o),
+                            t if ctx.is_thunk_term1(&*t)? => Ok(None),
+                            o => panic!("Merge expression has to evaluate to an enum-type construction: Evaluation(FieldAccess, ...): {:?}", o),
                         },
-                        o => panic!("How to merge {:?}", o),
+                        o => panic!("Merge expression has to evaluate to an enum-type construction: {:?}", o),
                     },
                     t if ctx.is_thunk_term(t)? => Ok(None),
-                    o => panic!("How to merge {:?}", o),
+                    o => panic!("Merge term can be an expression or thunk term: {:?}", o),
                 }
             }
             Term1(Arrow(n, a, b)) => {
-                ctx = in_scope(ctx, a)?;
+                log::trace!(
+                    "{:4} eval Arrow {:?} {} {}",
+                    line!(),
+                    n,
+                    Show(a.as_ref()),
+                    Show(b.as_ref())
+                );
+                ctx = a.eval(ctx)?;
 
                 ctx.sym_table.enter_scope();
                 if let Some(name) = n {
                     ctx.sym_table.add_thunk(name);
                 }
-                ctx = in_scope(ctx, b)?;
+                ctx = b.eval(ctx)?;
                 ctx.sym_table.exit_scope();
 
                 Ok(None)
             }
             Term1(IfThenElse(c, a, b)) => {
-                ctx = in_scope2(ctx, a, b)?;
-                ctx = in_scope(ctx, c)?;
+                ctx = a.eval(ctx)?;
+                ctx = b.eval(ctx)?;
+                ctx = c.eval(ctx)?;
                 match c.as_ref() {
                     Term1(Term(Var("True", 0, _))) => Err(Some(ctx.unbox(a))),
                     Term1(Term(Var("False", 0, _))) => Err(Some(ctx.unbox(b))),
@@ -306,13 +321,26 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 }
             }
             Lambda(name, a, b) => {
-                ctx = in_scope(ctx, a)?;
+                log::trace!(
+                    "{:4} eval Lambda {} : {} → {}",
+                    line!(),
+                    name,
+                    Show(a.as_ref().map(|a| a.as_ref()).unwrap_or(&<_>::default())),
+                    Show(b.as_ref())
+                );
+                ctx = a.eval(ctx)?;
 
                 ctx.sym_table.enter_scope();
                 ctx.sym_table.add_thunk(name);
-                ctx = in_scope(ctx, b)?;
+                ctx = b.eval(ctx)?;
                 ctx.sym_table.exit_scope();
 
+                log::trace!(
+                    "{:4} eval Lambda => {} → {}",
+                    line!(),
+                    name,
+                    Show(b.as_ref())
+                );
                 Ok(None)
             }
             other => {
@@ -422,12 +450,12 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
-            Var(n, s, Some(f)) => self.sym_table.is_thunk1(*f, n, *s)?,
+            Var(n, s, _) => self.sym_table.is_thunk1(0, n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
             Record(_) => false,
             Merge(_, t) => self.is_thunk_term(t)?,
             Expr(e) => self.is_thunk_expr(e)?,
-            TypeEnum(_) => false,
+            TypeEnum(_) => true,
             other => panic!("How to know if thunk term? {:?} ", other,),
         })
     }

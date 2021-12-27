@@ -13,12 +13,12 @@ pub struct Info<'i> {
 #[derive(Debug)]
 pub struct Scope<'i> {
     name_info: Map<&'i str, Info<'i>>,
-    is_shadow: bool,
 }
 
 #[derive(Default)]
 pub struct SymTable<'i> {
     scope: Deq<Scope<'i>>,
+    mark: usize,
 }
 
 impl<'i> SymTable<'i> {
@@ -32,13 +32,30 @@ impl<'i> SymTable<'i> {
         self.next_scope_id() - 1
     }
 
+    pub fn scope_offset(&self, sid: usize) -> usize {
+        self.scope_id() - sid
+    }
+
+    pub fn mark_scope(&mut self) {
+        self.mark = self.scope.len();
+        log::trace!("mark at: {}", self.scope_id());
+    }
+
+    pub fn return_to_marked_scope(&mut self) {
+        self.scope.shrink_to(self.mark);
+        log::trace!("return to mark: {}", self.scope_id());
+    }
+
     pub fn enter_scope1(&mut self, is_shadow: bool) {
         let scope = Scope {
             name_info: <_>::default(),
-            is_shadow,
         };
 
-        log::trace!("enter {:?}", scope);
+        log::trace!(
+            "enter {}{}",
+            self.next_scope_id(),
+            if is_shadow { " (shadow)" } else { "" }
+        );
         self.scope.push_front(scope);
     }
 
@@ -46,16 +63,8 @@ impl<'i> SymTable<'i> {
         self.enter_scope1(false)
     }
 
-    pub fn enter_shadow(&mut self) {
-        self.enter_scope1(true)
-    }
-
     pub fn exit_scope(&mut self) {
-        loop {
-            if !self.scope.pop_front().map(|s| s.is_shadow).unwrap_or(false) {
-                break;
-            }
-        }
+        self.scope.pop_front();
         log::trace!("exit to {}", self.scope_id());
     }
 
@@ -93,30 +102,25 @@ impl<'i> SymTable<'i> {
         self.add(name, None, None)
     }
 
-    pub fn lookup_from(
-        &self,
-        starting_scope_id: usize,
-        name: &str,
-        mut nscope: u16,
-    ) -> Result<&Info<'i>> {
+    fn lookup_from(&self, scope_offset: usize, name: &str, mut nscope: u16) -> Result<&Info<'i>> {
         log::trace!(
             "{:4} ({}) Lookup {} >={} @{}",
             line!(),
             self.scope_id(),
             name,
-            starting_scope_id,
+            scope_offset,
             nscope,
         );
 
         let mut in_scope_id = self.scope.len();
-        for scope in self.scope.iter().skip(self.scope_id() - starting_scope_id) {
+        for scope in self.scope.iter().skip(scope_offset) {
             if let Some(info) = scope.name_info.get(name) {
                 if nscope == 0 {
                     log::debug!(
                         "{:4} Lookup {} >={} @{}  ->{} {:?}",
                         line!(),
                         name,
-                        starting_scope_id,
+                        scope_offset,
                         nscope,
                         in_scope_id - 1,
                         info
@@ -131,8 +135,12 @@ impl<'i> SymTable<'i> {
         panic!("[ERROR] Not found: {}", name)
     }
 
+    pub fn lookup_from_offset(&self, scope_offset: usize, name: &str) -> Result<&Info<'i>> {
+        self.lookup_from(scope_offset, name, 0)
+    }
+
     pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
-        self.lookup_from(self.scope_id(), name, nscope)
+        self.lookup_from(0, name, nscope)
     }
 
     pub fn is_thunk1(&self, starting_scope_id: usize, name: &str, nscope: u16) -> Result<bool> {
