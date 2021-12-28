@@ -1,4 +1,4 @@
-use super::{bail, AsImm, Result, SymTable, Set, Show};
+use super::{bail, AsImm, Result, Set, Show, SymTable};
 use std::mem;
 
 pub type Ctx<'i> = &'i mut Context<'i>;
@@ -121,7 +121,12 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 Err(Some(e))
             }
             Term1(Term(Project(1, t, selectors))) => {
-                log::trace!("{:4} eval Project(1) {} . {:?}", line!(), Show(t.as_ref()), selectors);
+                log::trace!(
+                    "{:4} eval Project(1) {} . {:?}",
+                    line!(),
+                    Show(t.as_ref()),
+                    selectors
+                );
                 ctx = in_place_term(ctx, t)?;
                 let mut names = Set::new();
                 for name in selectors {
@@ -135,7 +140,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         Term(Var(n, _, _)) => {
                             names.insert(*n);
                         }
-                        o => panic!("Projection selectors must be identifiers: {:?}", o)
+                        o => panic!("Projection selectors must be identifiers: {:?}", o),
                     }
                 }
                 match t.as_mut() {
@@ -148,7 +153,10 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         Err(Some(Term1(Term(t))))
                     }
                     t if ctx.is_thunk_term(t)? => Ok(None),
-                    o => panic!("Projection term must be a type record (or thunk term): {:?}", o),
+                    o => panic!(
+                        "Projection term must be a type record (or thunk term): {:?}",
+                        o
+                    ),
                 }
             }
             Term1(Term(FieldAccess(t, name))) => {
@@ -239,7 +247,10 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                             Err(Some(ctx.unbox(b)))
                         }
                         Term1(Evaluation(f, _)) if ctx.is_thunk_term1(f.as_ref())? => Ok(None),
-                        o => panic!("After-evaluation non lambda expression in substitution: {:?}", o),
+                        o => panic!(
+                            "After-evaluation non lambda expression in substitution: {:?}",
+                            o
+                        ),
                     },
                     (Term(FieldAccess(t, _)), _) => match t.as_mut() {
                         t if ctx.is_thunk_term(t)? => Ok(None),
@@ -433,15 +444,23 @@ impl<'i> Context<'i> {
             def_thunk("Integer/clamp");
             def_thunk("Integer/negate");
             def_thunk("Integer/show");
+            def_thunk("Integer/toDouble");
             def_thunk("Kind");
             def_thunk("List");
             def_thunk("List/build");
             def_thunk("List/fold");
+            def_thunk("List/head");
+            def_thunk("List/indexed");
+            def_thunk("List/last");
+            def_thunk("List/length");
             def_thunk("List/reverse");
             def_thunk("Natural");
             def_thunk("Natural/even");
+            def_thunk("Natural/fold");
             def_thunk("Natural/isZero");
+            def_thunk("Natural/odd");
             def_thunk("Natural/show");
+            def_thunk("Natural/subtract");
             def_thunk("Natural/toInteger");
             def_thunk("None");
             def_thunk("Optional");
