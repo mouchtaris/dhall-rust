@@ -1,5 +1,4 @@
-use super::{bail, AsImm, Result, SymTable};
-use show::Show;
+use super::{bail, AsImm, Result, SymTable, Set, Show};
 use std::mem;
 
 pub type Ctx<'i> = &'i mut Context<'i>;
@@ -121,6 +120,37 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 // Replace with inner expr
                 Err(Some(e))
             }
+            Term1(Term(Project(1, t, selectors))) => {
+                log::trace!("{:4} eval Project(1) {} . {:?}", line!(), Show(t.as_ref()), selectors);
+                ctx = in_place_term(ctx, t)?;
+                let mut names = Set::new();
+                for name in selectors {
+                    // DO NOT Eval! These are declaring identifiers, not to be looked up.
+                    // (dispite being a term in ast, this is parsing bogus).
+                    //
+                    //ctx = in_place_term1(ctx, name)?;
+                    //
+                    // Simply extract to names:
+                    match name {
+                        Term(Var(n, _, _)) => {
+                            names.insert(*n);
+                        }
+                        o => panic!("Projection selectors must be identifiers: {:?}", o)
+                    }
+                }
+                match t.as_mut() {
+                    Record(fields) => {
+                        fields.retain(|(name, _)| {
+                            name.front().map(|p| names.contains(p)).unwrap_or(false)
+                        });
+                        let mut t = mem::take(t);
+                        let t = ctx.unbox(&mut t);
+                        Err(Some(Term1(Term(t))))
+                    }
+                    t if ctx.is_thunk_term(t)? => Ok(None),
+                    o => panic!("Projection term must be a type record (or thunk term): {:?}", o),
+                }
+            }
             Term1(Term(FieldAccess(t, name))) => {
                 ctx = in_place_term(ctx, t)?;
                 match t.as_mut() {
@@ -208,7 +238,8 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                             ctx.sym_table.exit_scope();
                             Err(Some(ctx.unbox(b)))
                         }
-                        _ => panic!("After-evaluation non lambda expression in substitution"),
+                        Term1(Evaluation(f, _)) if ctx.is_thunk_term1(f.as_ref())? => Ok(None),
+                        o => panic!("After-evaluation non lambda expression in substitution: {:?}", o),
                     },
                     (Term(FieldAccess(t, _)), _) => match t.as_mut() {
                         t if ctx.is_thunk_term(t)? => Ok(None),
@@ -369,6 +400,7 @@ pub struct Context<'i> {
     sym_table: SymTable<'i>,
     _shelf_box_expr: Vec<Box<ast::Expr<'i>>>,
     _shelf_box_term1: Vec<Box<ast::Term1<'i>>>,
+    _shelf_box_term: Vec<Box<ast::Term<'i>>>,
 }
 
 impl<'i> Context<'i> {
@@ -378,6 +410,7 @@ impl<'i> Context<'i> {
             sym_table: <_>::default(),
             _shelf_box_expr: <_>::default(),
             _shelf_box_term1: <_>::default(),
+            _shelf_box_term: <_>::default(),
         };
         ctx.init();
         ctx
@@ -526,5 +559,11 @@ impl<'i> Unboxer<ast::Expr<'i>> for Context<'i> {
 impl<'i> Unboxer<ast::Term1<'i>> for Context<'i> {
     fn box_shelf(&mut self) -> &mut Vec<Box<ast::Term1<'i>>> {
         &mut self._shelf_box_term1
+    }
+}
+
+impl<'i> Unboxer<ast::Term<'i>> for Context<'i> {
+    fn box_shelf(&mut self) -> &mut Vec<Box<ast::Term<'i>>> {
+        &mut self._shelf_box_term
     }
 }

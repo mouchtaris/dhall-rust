@@ -4,8 +4,10 @@ mod sym_table;
 pub use {
     error::{bail, Error, Result},
     eval::{ctx, Context, Ctx, Eval},
+    show::Show,
     std::collections::{
         hash_map::{Entry, HashMap as Map},
+        hash_set::HashSet as Set,
         VecDeque as Deq,
     },
     sym_table::{Info, SymTable, Value},
