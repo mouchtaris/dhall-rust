@@ -295,6 +295,9 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     merge_table,
                     Show(t.as_ref())
                 );
+                for (_, data_handler) in merge_table.iter_mut() {
+                    ctx = data_handler.eval(ctx)?;
+                }
                 match t.as_mut() {
                     Expr(e) => match e.as_mut() {
                         Term1(Evaluation(eval_f, eval_a)) => match eval_f.as_mut() {
@@ -308,14 +311,16 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                         //
                                         // In typeless dust, we actually only care for the field
                                         // name...
-                                        let _ = type_enum;
+                                        // But normalize non-the-less
+                                        for (_, arg_type) in type_enum.iter_mut() {
+                                            ctx = arg_type.eval(ctx)?;
+                                        }
                                         // And look it up in the merge table
+                                        ctx = in_place_term(ctx, eval_a)?;
                                         let mut mti = merge_table.iter_mut();
                                         loop {
                                             match mti.next() {
                                                 Some((name, data_handler)) => {
-                                                    ctx = data_handler.eval(ctx)?;
-
                                                     // Only care for the first/only element:
                                                     let name = name.front().unwrap();
                                                     if fields_n == name {
@@ -323,9 +328,8 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                                         match data_handler.as_mut() {
                                                             Lambda(_, _, _) => {
                                                                 let data_handler = ctx.rebox(Term(Expr(mem::take(data_handler))));
-                                                                let eval_a = mem::take(eval_a);
-                                                                let mut re_eval = Term1(Evaluation(data_handler, eval_a));
-                                                                log::trace!("Merge result re-evaluation: {:?}", re_eval);
+                                                                let mut re_eval = Term1(Evaluation(data_handler, mem::take(eval_a)));
+                                                                log::trace!("{:4} Merge result re-evaluation: {:?}", line!(), re_eval);
                                                                 ctx = re_eval.eval(ctx)?;
                                                                 break Err(Some(re_eval))
                                                             }
