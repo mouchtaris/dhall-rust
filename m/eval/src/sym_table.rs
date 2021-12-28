@@ -102,25 +102,23 @@ impl<'i> SymTable<'i> {
         self.add(name, None, None)
     }
 
-    fn lookup_from(&self, scope_offset: usize, name: &str, mut nscope: u16) -> Result<&Info<'i>> {
+    pub fn lookup(&self, name: &str, mut nscope: u16) -> Result<&Info<'i>> {
         log::trace!(
-            "{:4} ({}) Lookup {} >={} @{}",
+            "{:4} ({}) Lookup {} @{}",
             line!(),
             self.scope_id(),
             name,
-            scope_offset,
             nscope,
         );
 
         let mut in_scope_id = self.scope.len();
-        for scope in self.scope.iter().skip(scope_offset) {
+        for scope in self.scope.iter() {
             if let Some(info) = scope.name_info.get(name) {
                 if nscope == 0 {
                     log::debug!(
-                        "{:4} Lookup {} >={} @{}  ->{} {:?}",
+                        "{:4} Lookup {} @{}  ->{} {:?}",
                         line!(),
                         name,
-                        scope_offset,
                         nscope,
                         in_scope_id - 1,
                         info
@@ -135,17 +133,9 @@ impl<'i> SymTable<'i> {
         panic!("[ERROR] Not found: {}", name)
     }
 
-    pub fn lookup_from_offset(&self, scope_offset: usize, name: &str) -> Result<&Info<'i>> {
-        self.lookup_from(scope_offset, name, 0)
-    }
-
-    pub fn lookup(&self, name: &str, nscope: u16) -> Result<&Info<'i>> {
-        self.lookup_from(0, name, nscope)
-    }
-
-    pub fn is_thunk1(&self, starting_scope_id: usize, name: &str, nscope: u16) -> Result<bool> {
+    pub fn is_thunk1(&self, name: &str, nscope: u16) -> Result<bool> {
         Ok(self
-            .lookup_from(starting_scope_id, name, nscope)?
+            .lookup(name, nscope)?
             .value
             .is_none())
     }

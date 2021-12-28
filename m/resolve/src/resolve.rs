@@ -65,7 +65,7 @@ impl<'i> Resolve for ast::Term<'i> {
             FieldAccess(term, _) => term.resolve(r),
             Project(_, term, fields) => (term, fields).resolve(r),
             Path(_) => Ok(()),
-            Var(_, _, _) => Ok(()),
+            Var(_, _) => Ok(()),
             Text(_, ts) => ts.resolve(r),
             List(vs) => vs.resolve(r),
             TypeRecord(es) | Record(es) => es.resolve(r),
