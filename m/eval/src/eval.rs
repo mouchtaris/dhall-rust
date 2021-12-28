@@ -113,6 +113,9 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
             Term1(Term(Integer(_, _))) => Ok(None),
             Term1(Term(Double(_))) => Ok(None),
             Term1(Term(Text(_, _))) => Ok(None),
+            Term1(Term(Import {
+                path: "missing", ..
+            })) => Err(Some(ast::const_0_expr())),
             Term1(Term(Expr(e))) => {
                 ctx = e.eval(ctx)?;
                 let e = ctx.unbox(e);
@@ -200,11 +203,17 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     }
                     TypeEnum(_) => Ok(None),
                     t if ctx.is_thunk_term(t)? => Ok(None),
-                    other => panic!(
-                        "Field Access of: {:?} {}",
-                        other,
-                        ctx.is_thunk_term(&other)?
-                    ),
+                    other => {
+                        let is_thunk = ctx.is_thunk_term(&other)?;
+                        let as_expr = Term1(Term(mem::take(other)));
+                        panic!(
+                            "Field Access of: (thunk={}) .{} {}\n{:?}",
+                            is_thunk,
+                            name,
+                            Show(&as_expr),
+                            as_expr,
+                        );
+                    }
                 }
             }
             Term1(Ascribe(a, b)) => {
@@ -212,9 +221,23 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = b.eval(ctx)?;
                 Ok(None)
             }
+            Term1(Operation(a, "⫽" | "//", b)) => {
+                log::trace!("{:4} eval Operatiorn //", line!());
+                ctx = in_place_term1(ctx, a)?;
+                ctx = in_place_term1(ctx, b)?;
+                match (a.as_mut(), b.as_mut()) {
+                    (Term(Record(fields_a)), Term(Record(fields_b))) => {
+                        fields_a.append(fields_b);
+                        Err(Some(Term1(ctx.unbox(a))))
+                    }
+                    (a, b) if ctx.is_thunk_term1(&a)? || ctx.is_thunk_term1(&b)? => Ok(None),
+                    o => panic!("The operants of // must be records: {:?}", o),
+                }
+            }
             Term1(Operation(a, _, b)) => {
                 ctx = in_place_term1(ctx, a)?;
                 ctx = in_place_term1(ctx, b)?;
+                // Deplay evaluation (and implementation) of operations
                 Ok(None)
             }
             Term1(Evaluation(f, x)) => {
@@ -456,6 +479,7 @@ impl<'i> Context<'i> {
             def_thunk("List/reverse");
             def_thunk("Natural");
             def_thunk("Natural/even");
+            def_thunk("Natural/build");
             def_thunk("Natural/fold");
             def_thunk("Natural/isZero");
             def_thunk("Natural/odd");
