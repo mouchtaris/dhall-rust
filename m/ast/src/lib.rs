@@ -1,5 +1,7 @@
 pub const VERSION: &str = "0.0.1";
 
+mod is_list;
+pub use is_list::IsList;
 pub use std::collections::VecDeque as Deq;
 
 pub type Ident<'i> = &'i str;

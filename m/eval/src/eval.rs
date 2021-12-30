@@ -1,4 +1,5 @@
 use super::{bail, ASubstitution, AsImm, Result, Set, Show, SymTable};
+use ast::IsList;
 use std::mem;
 
 pub type Ctx<'i> = &'i mut Context<'i>;
@@ -219,6 +220,31 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                     ("⫽" | "//", Term(Record(fields_a)), Term(Record(fields_b))) => {
                         fields_a.append(fields_b);
                         Err(Some(Term1(ctx.unbox(a))))
+                    }
+                    ("≡" | "===", expr_a, expr_b) => {
+                        let _ = (expr_a, expr_b);
+                        log::warn!("{:4} STUB ≡", line!());
+                        Ok(None)
+                    }
+                    ("#", Term(List(a)), Term(List(b))) => {
+                        a.append(b);
+                        Err(Some(Term1(Term(List(mem::take(a))))))
+                    }
+                    ("#", Term(List(a)), Ascribe(b, _)) if b.is_list() => {
+                        let b = b.get_list_mut();
+                        a.append(b);
+                        Err(Some(Term1(Term(List(mem::take(a))))))
+                    }
+                    ("#", Ascribe(a, _), Term(List(b))) if a.is_list() => {
+                        let a = a.get_list_mut();
+                        a.append(b);
+                        Err(Some(Term1(Term(List(mem::take(a))))))
+                    }
+                    ("#", Ascribe(a, _), Ascribe(b, _)) if a.is_list() && b.is_list() => {
+                        let a = a.get_list_mut();
+                        let b = b.get_list_mut();
+                        a.append(b);
+                        Err(Some(Term1(Term(List(mem::take(a))))))
                     }
                     (_, a, b) if ctx.is_thunk_term1(&a)? || ctx.is_thunk_term1(&b)? => Ok(None),
                     o => panic!("Invalid operation: {:?}", o),
@@ -513,7 +539,7 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
-            Integer(_) | Record(_) => false,
+            Integer(_) | Record(_) | List(_) | Text(_, _) | Double(_) => false,
             Var(n, s) => self.sym_table.is_thunk1(n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
             Merge(_, t) => self.is_thunk_term(t)?,
@@ -530,6 +556,8 @@ impl<'i> Context<'i> {
             Term(t) => self.is_thunk_term(t)?,
             Evaluation(t, _) => self.is_thunk_term1(t)?,
             Operation(a, _, b) => self.is_thunk_term1(a)? || self.is_thunk_term1(b)?,
+            IfThenElse(c, _, _) => self.is_thunk_expr(c)?,
+            Ascribe(a, _) => self.is_thunk_term1(a.as_ref())?,
             other => panic!("How to know if thunk term1? {:?}", other,),
         })
     }
