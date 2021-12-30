@@ -241,12 +241,15 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
 
                             ctx.sym_table.enter_scope();
                             let mut x = ast::Expr::Term1(ast::Term1::Term(x));
-                            // x.commit_name(n);
+                            x.commit_name(n);
                             ctx.sym_table.add(n, None, Some(x));
 
                             ctx = t.eval(ctx)?;
                             ctx = b.eval(ctx)?;
                             ctx.sym_table.exit_scope();
+
+                            b.free_name(n);
+
                             Err(Some(ctx.unbox(b)))
                         }
                         Term1(Evaluation(f, _)) if ctx.is_thunk_term1(f.as_ref())? => Ok(None),
