@@ -62,7 +62,7 @@ pub mod new {
         impl_report! {
         integer -> Term 's
             : (bool, &'s str)
-            = |(is_neg, val)| Term::Integer(is_neg, val) }
+            = |(is_neg, val)| Term::Integer(if is_neg { -1 } else { 1 } * i32::from_str_radix(val, 10).unwrap()) }
 
         impl_report! {
         double -> Term 's

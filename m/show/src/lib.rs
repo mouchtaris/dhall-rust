@@ -86,7 +86,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term<'i>> {
         let Self(obj) = self;
         use ast::Term::*;
         match obj {
-            &Integer(neg, s) => write!(f, "{}{}", if *neg { "-" } else { "" }, s),
+            &Integer(v) => write!(f, "{}", v),
             Embed(code) => writeln!(f, "{}", code),
             &Var(name, n) => {
                 let ear = if lex::is_keyword(name) { "`" } else { "" };

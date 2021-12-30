@@ -1,7 +1,9 @@
 pub const VERSION: &str = "0.0.1";
+mod a_subst;
 mod eval;
 mod sym_table;
 pub use {
+    a_subst::ASubstitution,
     error::{bail, Error, Result},
     eval::{ctx, Context, Ctx, Eval},
     show::Show,

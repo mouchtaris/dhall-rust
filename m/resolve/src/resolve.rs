@@ -60,7 +60,7 @@ impl<'i> Resolve for ast::Term<'i> {
     fn resolve<V: Visitor>(&mut self, r: &mut V) -> Result<()> {
         use ast::Term::*;
         match self {
-            Integer(_, _) => Ok(()),
+            Integer(_) => Ok(()),
             Double(_) => Ok(()),
             FieldAccess(term, _) => term.resolve(r),
             Project(_, term, fields) => (term, fields).resolve(r),

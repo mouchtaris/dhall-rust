@@ -1,4 +1,4 @@
-use super::{bail, AsImm, Result, Set, Show, SymTable};
+use super::{bail, ASubstitution, AsImm, Result, Set, Show, SymTable};
 use std::mem;
 
 pub type Ctx<'i> = &'i mut Context<'i>;
@@ -64,12 +64,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 Ok(Some(val.as_mut()))
             }
             Term1(Term(Var(name, scope))) => {
-                log::trace!(
-                    "{:4} eval Var {} @{}",
-                    line!(),
-                    name,
-                    scope,
-                );
+                log::trace!("{:4} eval Var {} @{}", line!(), name, scope,);
 
                 let info = ctx.sym_table.lookup(name, *scope)?;
 
@@ -102,7 +97,7 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 }
                 Ok(None)
             }
-            Term1(Term(Integer(_, _))) => Ok(None),
+            Term1(Term(Integer(_))) => Ok(None),
             Term1(Term(Double(_))) => Ok(None),
             Term1(Term(Text(_, _))) => Ok(None),
             Term1(Term(Import {
@@ -213,24 +208,21 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = b.eval(ctx)?;
                 Ok(None)
             }
-            Term1(Operation(a, "⫽" | "//", b)) => {
-                log::trace!("{:4} eval Operatiorn //", line!());
+            Term1(Operation(a, op, b)) => {
                 ctx = in_place_term1(ctx, a)?;
                 ctx = in_place_term1(ctx, b)?;
-                match (a.as_mut(), b.as_mut()) {
-                    (Term(Record(fields_a)), Term(Record(fields_b))) => {
+                match (*op, a.as_mut(), b.as_mut()) {
+                    ("+", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        let v = a + b;
+                        Err(Some(Term1(Term(Integer(v)))))
+                    }
+                    ("⫽" | "//", Term(Record(fields_a)), Term(Record(fields_b))) => {
                         fields_a.append(fields_b);
                         Err(Some(Term1(ctx.unbox(a))))
                     }
-                    (a, b) if ctx.is_thunk_term1(&a)? || ctx.is_thunk_term1(&b)? => Ok(None),
-                    o => panic!("The operants of // must be records: {:?}", o),
+                    (_, a, b) if ctx.is_thunk_term1(&a)? || ctx.is_thunk_term1(&b)? => Ok(None),
+                    o => panic!("Invalid operation: {:?}", o),
                 }
-            }
-            Term1(Operation(a, _, b)) => {
-                ctx = in_place_term1(ctx, a)?;
-                ctx = in_place_term1(ctx, b)?;
-                // Deplay evaluation (and implementation) of operations
-                Ok(None)
             }
             Term1(Evaluation(f, x)) => {
                 ctx = in_place_term1(ctx, f)?;
@@ -245,11 +237,11 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 match (f.as_mut(), x) {
                     (Term(Expr(e)), x) => match e.as_mut() {
                         Lambda(n, t, b) => {
-                            let mut x: ast::Term = mem::take(x);
+                            let x: ast::Term = mem::take(x);
 
                             ctx.sym_table.enter_scope();
                             let mut x = ast::Expr::Term1(ast::Term1::Term(x));
-                            x.commit_name(n);
+                            // x.commit_name(n);
                             ctx.sym_table.add(n, None, Some(x));
 
                             ctx = t.eval(ctx)?;
@@ -518,9 +510,9 @@ impl<'i> Context<'i> {
         use ast::Term::*;
 
         Ok(match t {
+            Integer(_) | Record(_) => false,
             Var(n, s) => self.sym_table.is_thunk1(n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
-            Record(_) => false,
             Merge(_, t) => self.is_thunk_term(t)?,
             Expr(e) => self.is_thunk_expr(e)?,
             TypeEnum(_) => true,

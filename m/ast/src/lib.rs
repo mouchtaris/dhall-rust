@@ -41,7 +41,7 @@ pub enum Term1<'i> {
 
 #[derive(Clone, Debug)]
 pub enum Term<'i> {
-    Integer(bool, &'i str),
+    Integer(i32),
     Double(&'i str),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
@@ -257,7 +257,7 @@ pub fn utf8len(c: char) -> usize {
 }
 
 pub fn const_0_term<'i>() -> Term<'i> {
-    Term::Integer(false, "0")
+    Term::Integer(0)
 }
 pub fn const_0_term1<'i>() -> Term1<'i> {
     Term1::Term(const_0_term())

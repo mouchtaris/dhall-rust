@@ -111,7 +111,6 @@ impl<'i> SymTable<'i> {
             nscope,
         );
 
-        let mut in_scope_id = self.scope.len();
         for scope in self.scope.iter() {
             if let Some(info) = scope.name_info.get(name) {
                 if nscope == 0 {
@@ -120,24 +119,27 @@ impl<'i> SymTable<'i> {
                         line!(),
                         name,
                         nscope,
-                        in_scope_id - 1,
+                        info.scope_id,
                         info
                     );
                     return Ok(info);
                 }
                 nscope -= 1;
+                log::debug!(
+                    "{:4} Skip {} ->{} Left @{}",
+                    line!(),
+                    name,
+                    info.scope_id,
+                    nscope
+                );
             }
-            in_scope_id -= 1;
         }
 
         panic!("[ERROR] Not found: {}", name)
     }
 
     pub fn is_thunk1(&self, name: &str, nscope: u16) -> Result<bool> {
-        Ok(self
-            .lookup(name, nscope)?
-            .value
-            .is_none())
+        Ok(self.lookup(name, nscope)?.value.is_none())
     }
 
     pub fn is_thunk(&self, name: &str, nscope: u16) -> Result<bool> {
