@@ -590,6 +590,7 @@ impl<'i> Context<'i> {
             Integer(_) | Record(_) | List(_) | Text(_, _) | Double(_) => false,
             Var(n, s) => self.sym_table.is_thunk1(n, *s)?,
             FieldAccess(t, _) => self.is_thunk_term(t)?,
+            Project(1, t, _) => self.is_thunk_term(t)?,
             Merge(_, t) => self.is_thunk_term(t)?,
             Expr(e) => self.is_thunk_expr(e)?,
             TypeEnum(_) => true,
