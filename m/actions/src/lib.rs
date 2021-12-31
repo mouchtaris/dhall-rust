@@ -67,7 +67,7 @@ pub mod new {
         impl_report! {
         double -> Term 's
             : &'s str
-            = |s: &'s str| Term::Double(s) }
+            = |s: &'s str| Term::Double(s.parse().unwrap()) }
 
         impl_report! {
         project -> Term 's

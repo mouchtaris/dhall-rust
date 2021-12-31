@@ -44,7 +44,7 @@ pub enum Term1<'i> {
 #[derive(Clone, Debug)]
 pub enum Term<'i> {
     Integer(i32),
-    Double(&'i str),
+    Double(f32),
     FieldAccess(Box<Term<'i>>, Ident<'i>),
     Project(u8, Box<Term<'i>>, Deq<Term1<'i>>),
     Path(TermPath<'i>),

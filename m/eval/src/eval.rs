@@ -213,10 +213,6 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                 ctx = in_place_term1(ctx, a)?;
                 ctx = in_place_term1(ctx, b)?;
                 match (*op, a.as_mut(), b.as_mut()) {
-                    ("+", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
-                        let v = a + b;
-                        Err(Some(Term1(Term(Integer(v)))))
-                    }
                     ("⫽" | "//", Term(Record(fields_a)), Term(Record(fields_b))) => {
                         fields_a.append(fields_b);
                         Err(Some(Term1(ctx.unbox(a))))
@@ -245,6 +241,58 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         let b = b.get_list_mut();
                         a.append(b);
                         Err(Some(Term1(Term(List(mem::take(a))))))
+                    }
+                    ("*", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Integer(a * b)))))
+                    }
+                    ("*", &mut Term(Double(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Double(a * b as f32)))))
+                    }
+                    ("*", &mut Term(Integer(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a as f32 * b)))))
+                    }
+                    ("*", &mut Term(Double(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a * b)))))
+                    }
+                    ("+", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Integer(a + b)))))
+                    }
+                    ("+", &mut Term(Double(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Double(a + b as f32)))))
+                    }
+                    ("+", &mut Term(Integer(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a as f32 + b)))))
+                    }
+                    ("+", &mut Term(Double(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a + b)))))
+                    }
+                    ("-", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Integer(a - b)))))
+                    }
+                    ("-", &mut Term(Double(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Double(a - b as f32)))))
+                    }
+                    ("-", &mut Term(Integer(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a as f32 - b)))))
+                    }
+                    ("-", &mut Term(Double(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a - b)))))
+                    }
+                    ("/", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Integer(a / b)))))
+                    }
+                    ("/", &mut Term(Double(a)), &mut Term(Integer(b))) => {
+                        Err(Some(Term1(Term(Double(a / b as f32)))))
+                    }
+                    ("/", &mut Term(Integer(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a as f32 / b)))))
+                    }
+                    ("/", &mut Term(Double(a)), &mut Term(Double(b))) => {
+                        Err(Some(Term1(Term(Double(a / b)))))
+                    }
+                    ("++", Term(Text(1, a)), Term(Text(1, b))) => {
+                        a.append(b);
+                        Err(Some(Term1(Term(Text(1, mem::take(a))))))
                     }
                     (_, a, b) if ctx.is_thunk_term1(&a)? || ctx.is_thunk_term1(&b)? => Ok(None),
                     o => panic!("Invalid operation: {:?}", o),
@@ -567,6 +615,7 @@ impl<'i> Context<'i> {
 
         Ok(match t {
             Term1(t1) => self.is_thunk_term1(t1)?,
+            Lambda(_, _, _) => false,
             other => panic!("How to know if thunk expr? {:?}", other,),
         })
     }
