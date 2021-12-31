@@ -404,7 +404,12 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                                             }
                                         }
                                     }
-                                    o => panic!("Merge expression has to evaluate to an enum-type construction: Evaluation(FiledAccess(TypeEnum(...), ...), ...): {:?}", o),
+                                    t if ctx.is_thunk_term(t)? => Ok(None),
+                                    o => {
+                                        let o = format!("{:?}", o);
+                                        let end = o.char_indices().take(30).map(|(i, _)| i).last().unwrap_or(0);
+                                        panic!("Merge expression has to evaluate to an enum-type construction: Evaluation(FiledAccess(TypeEnum(...), ...), ...): {}", &o[0..end]);
+                                    }
                                 }
                             }
                             t if ctx.is_thunk_term1(&*t)? => Ok(None),
@@ -616,7 +621,7 @@ impl<'i> Context<'i> {
 
         Ok(match t {
             Term1(t1) => self.is_thunk_term1(t1)?,
-            Lambda(_, _, _) => false,
+            Lambda(_, _, _) => true,
             other => panic!("How to know if thunk expr? {:?}", other,),
         })
     }
