@@ -217,6 +217,18 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         fields_a.append(fields_b);
                         Err(Some(Term1(ctx.unbox(a))))
                     }
+                    ("∧" | "/\\", Term(Record(fields_a)), Term(Record(fields_b))) => {
+                        let mut names = Set::new();
+                        let a_names = fields_a.iter().map(|(p, _)| p.front());
+                        let b_names = fields_b.iter().map(|(p, _)| p.front());
+                        for n in a_names.chain(b_names) {
+                            if !names.insert(n) {
+                                bail!("{:4} ∧ field collision: {:?}", line!(), n);
+                            }
+                        }
+                        fields_a.append(fields_b);
+                        Err(Some(Term1(ctx.unbox(a))))
+                    }
                     ("≡" | "===", expr_a, expr_b) => {
                         let _ = (expr_a, expr_b);
                         log::warn!("{:4} STUB ≡", line!());

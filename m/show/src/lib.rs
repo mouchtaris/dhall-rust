@@ -63,7 +63,7 @@ impl<'i> fmt::Display for Show<&'i ast::Term1<'i>> {
             IfThenElse(c, a, b) => {
                 write!(
                     f,
-                    "if {} then {} else {}",
+                    "(if {} then {} else {})",
                     Show(c.as_ref()),
                     Show(a.as_ref()),
                     Show(b.as_ref()),
