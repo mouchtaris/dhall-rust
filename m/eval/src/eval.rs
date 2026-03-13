@@ -2,6 +2,55 @@ use super::{bail, ASubstitution, AsImm, Result, Set, Show, SymTable};
 use ast::IsList;
 use std::mem;
 
+/// Create a Text term from an owned String by leaking it into a 'static str.
+/// This is intentional for a CLI tool that runs once and exits.
+fn make_text<'i>(s: String) -> ast::Term<'i> {
+    let s: &'static str = Box::leak(s.into_boxed_str());
+    let mut entries = ast::Deq::new();
+    entries.push_back((s, None));
+    ast::Term::Text(1, entries)
+}
+
+fn bool_var<'i>(b: bool) -> ast::Term<'i> {
+    ast::Term::Var(if b { "True" } else { "False" }, 0)
+}
+
+fn is_bool_true(t: &ast::Term1) -> bool {
+    matches!(t, ast::Term1::Term(ast::Term::Var("True", _)))
+}
+
+fn is_bool_false(t: &ast::Term1) -> bool {
+    matches!(t, ast::Term1::Term(ast::Term::Var("False", _)))
+}
+
+fn is_bool(t: &ast::Term1) -> bool {
+    is_bool_true(t) || is_bool_false(t)
+}
+
+fn make_path_1<'i>(name: &'i str) -> ast::Path<'i> {
+    let mut p = ast::Deq::new();
+    p.push_back(name);
+    p
+}
+
+fn some_term1<'i>(inner: ast::Term<'i>) -> ast::Term1<'i> {
+    let f = Box::new(ast::Term1::Term(ast::Term::Var("Some", 0)));
+    ast::Term1::Evaluation(f, inner)
+}
+
+fn none_term1<'i>() -> ast::Term1<'i> {
+    ast::Term1::Term(ast::Term::Var("None", 0))
+}
+
+/// Extract the text content from a Text term as an owned String.
+fn extract_text(entries: &ast::Deq<ast::TextEntry>) -> String {
+    entries
+        .iter()
+        .map(|(s, _)| *s)
+        .collect::<Vec<_>>()
+        .join("")
+}
+
 pub type Ctx<'i> = &'i mut Context<'i>;
 
 pub fn ctx<'i>() -> Context<'i> {
@@ -234,6 +283,23 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         log::warn!("{:4} STUB ≡", line!());
                         Ok(None)
                     }
+                    // Boolean operators
+                    ("&&" | "||" | "==" | "!=", a, b) if is_bool(a) && is_bool(b) => {
+                        let ta = is_bool_true(a);
+                        let tb = is_bool_true(b);
+                        let result = match *op {
+                            "&&" => ta && tb,
+                            "||" => ta || tb,
+                            "==" => ta == tb,
+                            _ => ta != tb,
+                        };
+                        Err(Some(Term1(Term(bool_var(result)))))
+                    }
+                    // Integer equality/inequality
+                    ("==" | "!=", &mut Term(Integer(a)), &mut Term(Integer(b))) => {
+                        let result = if *op == "==" { a == b } else { a != b };
+                        Err(Some(Term1(Term(bool_var(result)))))
+                    }
                     ("#", Term(List(a)), Term(List(b))) => {
                         a.append(b);
                         Err(Some(Term1(Term(List(mem::take(a))))))
@@ -348,6 +414,172 @@ impl<'i> Eval<'i> for ast::Expr<'i> {
                         t if ctx.is_thunk_term(t)? => Ok(None),
                         o => panic!("After-evaluation non field accessible: {:?}", o),
                     },
+
+                    // ── Unary built-in functions ──────────────────────────────
+                    // x is &mut ast::Term, so bare variant names from use ast::Term::*
+                    (Term(Var("Natural/show", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(make_text(format!("{}", *n))))))
+                    }
+                    (Term(Var("Integer/show", _)), Integer(n)) => {
+                        let s = if *n >= 0 {
+                            format!("+{}", *n)
+                        } else {
+                            format!("{}", *n)
+                        };
+                        Err(Some(Term1(Term(make_text(s)))))
+                    }
+                    (Term(Var("Double/show", _)), Double(d)) => {
+                        Err(Some(Term1(Term(make_text(format!("{}", *d))))))
+                    }
+                    (Term(Var("Natural/toInteger", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(Integer(*n)))))
+                    }
+                    (Term(Var("Integer/toDouble", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(Double(*n as f32)))))
+                    }
+                    (Term(Var("Integer/negate", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(Integer(-*n)))))
+                    }
+                    (Term(Var("Integer/clamp", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(Integer((*n).max(0))))))
+                    }
+                    (Term(Var("Natural/even", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(bool_var(*n % 2 == 0)))))
+                    }
+                    (Term(Var("Natural/odd", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(bool_var(*n % 2 != 0)))))
+                    }
+                    (Term(Var("Natural/isZero", _)), Integer(n)) => {
+                        Err(Some(Term1(Term(bool_var(*n == 0)))))
+                    }
+                    (Term(Var("Text/show", _)), Text(_, entries)) => {
+                        let content = extract_text(entries);
+                        let escaped = content
+                            .replace('\\', "\\\\")
+                            .replace('"', "\\\"")
+                            .replace('\n', "\\n")
+                            .replace('\r', "\\r")
+                            .replace('\t', "\\t")
+                            .replace("${", "\\${");
+                        // Raw content uses backslash-escape so Show renders "\"...\""
+                        let raw = format!("\\\"{}\\\"", escaped);
+                        Err(Some(Term1(Term(make_text(raw)))))
+                    }
+
+                    // ── Binary built-in functions ─────────────────────────────
+                    // Pattern: f = Evaluation(Var(builtin), first_arg), x = second_arg
+                    (Evaluation(inner_f, inner_x), y) if matches!(
+                        inner_f.as_ref(),
+                        // Use bare variant names (already in scope via `use ast::Term1::*`)
+                        Term(Var(
+                            "Natural/subtract"
+                            | "List/length"
+                            | "List/head"
+                            | "List/last"
+                            | "List/reverse"
+                            | "List/indexed"
+                            | "toMap",
+                            _
+                        ))
+                    ) => {
+                        let builtin = match inner_f.as_ref() {
+                            Term(Var(n, _)) => *n,
+                            _ => unreachable!(),
+                        };
+                        // inner_x and y are both &mut ast::Term; use bare variant names
+                        // inner_x and y are &mut ast::Term; use bare Term variant names
+                        match (builtin, inner_x as &mut ast::Term, y as &mut ast::Term) {
+                            ("Natural/subtract", Integer(x_val), Integer(y_val)) => {
+                                let result = (*y_val - *x_val).max(0);
+                                Err(Some(Term1(Term(Integer(result)))))
+                            }
+                            ("List/length", _, List(items)) => {
+                                let n = items.len() as i32;
+                                Err(Some(Term1(Term(Integer(n)))))
+                            }
+                            ("List/head", _, List(items)) => {
+                                let result = match items.front() {
+                                    Some(v) => {
+                                        // extract inner Term from the Val (Box<Expr>)
+                                        let t = match v.as_ref() {
+                                            ast::Expr::Term1(t1) => match t1 {
+                                                ast::Term1::Term(t) => t.clone(),
+                                                _ => ast::Term::Expr(v.clone()),
+                                            },
+                                            _ => ast::Term::Expr(v.clone()),
+                                        };
+                                        some_term1(t)
+                                    }
+                                    None => none_term1(),
+                                };
+                                Err(Some(Term1(result)))
+                            }
+                            ("List/last", _, List(items)) => {
+                                let result = match items.back() {
+                                    Some(v) => {
+                                        let t = match v.as_ref() {
+                                            ast::Expr::Term1(t1) => match t1 {
+                                                ast::Term1::Term(t) => t.clone(),
+                                                _ => ast::Term::Expr(v.clone()),
+                                            },
+                                            _ => ast::Term::Expr(v.clone()),
+                                        };
+                                        some_term1(t)
+                                    }
+                                    None => none_term1(),
+                                };
+                                Err(Some(Term1(result)))
+                            }
+                            ("List/reverse", _, List(items)) => {
+                                let reversed: ast::Deq<_> = items.iter().cloned().rev().collect();
+                                Err(Some(Term1(Term(List(reversed)))))
+                            }
+                            ("List/indexed", _, List(items)) => {
+                                let indexed: ast::Deq<ast::Val> = items
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(i, v)| {
+                                        let mut fields = ast::Deq::new();
+                                        fields.push_back((
+                                            make_path_1("index"),
+                                            Box::new(ast::Expr::Term1(ast::Term1::Term(
+                                                ast::Term::Integer(i as i32),
+                                            ))),
+                                        ));
+                                        fields.push_back((make_path_1("value"), v.clone()));
+                                        Box::new(ast::Expr::Term1(ast::Term1::Term(
+                                            ast::Term::Record(fields),
+                                        )))
+                                    })
+                                    .collect();
+                                Err(Some(Term1(Term(List(indexed)))))
+                            }
+                            ("toMap", _, Record(fields)) => {
+                                let mapped: ast::Deq<ast::Val> = fields
+                                    .iter()
+                                    .map(|(path, val)| {
+                                        let key =
+                                            path.iter().cloned().collect::<Vec<_>>().join(".");
+                                        let key_text = make_text(key);
+                                        let mut entry_fields = ast::Deq::new();
+                                        entry_fields.push_back((
+                                            make_path_1("mapKey"),
+                                            Box::new(ast::Expr::Term1(ast::Term1::Term(key_text))),
+                                        ));
+                                        entry_fields
+                                            .push_back((make_path_1("mapValue"), val.clone()));
+                                        Box::new(ast::Expr::Term1(ast::Term1::Term(
+                                            ast::Term::Record(entry_fields),
+                                        )))
+                                    })
+                                    .collect();
+                                Err(Some(Term1(Term(List(mapped)))))
+                            }
+                            // Type argument or other thunk combo — keep as thunk
+                            _ => Ok(None),
+                        }
+                    }
+
                     (t, _) if ctx.is_thunk_term1(t)? => Ok(None),
                     other => panic!("How to Evaluation {:?}", other),
                 }

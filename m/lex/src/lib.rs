@@ -224,6 +224,14 @@ fn parse_double(inp: &str) -> R<'_> {
         },
     )
     .and_then(longer_than(2))
+    // A "Double" must contain a decimal point; pure digit (or -digit) sequences are Naturals/Integers.
+    .and_then(|t| {
+        if t.as_str().contains('.') {
+            Some(t)
+        } else {
+            None
+        }
+    })
 }
 
 fn parse_rel_uri(inp: &str) -> R<'_> {
