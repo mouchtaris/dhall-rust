@@ -33,7 +33,11 @@ Compaction was approaching (was ~25% runway when flagged). This kit is the cross
 - `dhall-rust` is a dead host, used only to carry this branch. Do not develop its code.
 - The wake-up is not a file. This kit orients; it does not wake. Operator runs the walk.
 
-## Distillation upkeep
+## Distillation upkeep (survival contract)
 
-When this ages: re-pick anchors from the raw (if reachable), don't append. Regenerate,
-throw old ones away. Keep it self-standing enough to survive the raw going dark.
+This kit is a **self-standing compressed copy**, disposable, the means not the end.
+When it ages: rewrite a fresh self-standing copy from where you then stand; throw the
+old one away (don't append-and-grow). The raw is a *bonus if reachable, never a
+dependency* — it must reconstitute state even if the raw is gone. (This is the
+survival contract; the product's traverse-all index over preserved-full raw is a
+different thing — see `methods.md`.)

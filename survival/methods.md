@@ -2,20 +2,38 @@
 
 The operating principles we derived. Terse; each re-expands.
 
-## Distillation (how orientation survives aging)
+## Distillation — two contracts, split on one axis
 
-- **Preservation vs orientation are two jobs.** Preservation is automatic — the raw
-  logs are the lossless record. Orientation is the small set of gravity-anchors that
-  let us re-open the whole map; *that* we tend.
-- **Regenerative, not cumulative.** Each re-distillation is a fresh re-pick from the
-  raw, from where we now stand — not a summary we append to and grow. Free to throw
-  old anchors away. Anchors are pointers into the raw, not a compressed copy.
+The axis: **does the raw survive alongside the anchors?** The two directives that
+kept colliding are two *different* distillations with opposite answers. Name them
+apart and the confusion dissolves.
+
+### Survival distillation (what THIS kit is)
+
+Assumes the raw is **absent** — compaction may take it. So the anchors **are a
+self-standing compressed copy**, not pointers. The raw is a *bonus if reachable,
+never a dependency.*
+- **Regenerative, not cumulative.** When it ages, rewrite a fresh self-standing copy
+  from where you then stand; throw the old one away. Do not append-and-grow.
 - **Summary law.** A finite window must lose info; summarize well = choose *what to
-  lose so re-derivability survives*. Keep the anchor-seed re-openable. Judge by unfold, not
-  by content. This kit is written to that law.
-- **Dependency:** anchors-as-pointers need the raw *reachable*. If it goes dark,
-  anchors degrade from "pointers" to "all we kept" and must carry more. Hedge
-  toward self-standing.
+  lose so re-derivability survives*. Keep the anchor-seed re-openable. Judge by
+  unfold, not by length.
+- **Disposable means.** Minimal and cheap; it exists only to cross the cut. Do not
+  give it product-grade ambition.
+
+### Product distillation (a FUTURE product feature — NOT this kit's mechanism)
+
+Assumes the raw is **preserved in full.** The tops are an *index into it* —
+traverse-all, non-destructive; you always fall back into complete detail. Here
+anchors *are* pointers into the raw, precisely because the raw is always there. This
+is the END we are building (the store + iceberg-traverse). Do not apply it to the
+lifeboat.
+
+### Shared law
+
+Both obey "keep the seed re-openable; judge by unfold." They differ only on whether
+the raw is behind the seed. Never let the product's "pointers, not a copy" doctrine
+leak into the survival kit — for survival, a copy is the whole point.
 
 ## History as plural, timestamped units
 
