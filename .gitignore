@@ -1,0 +1,5 @@
+# This --orphan branch ('survival') is us. It hijacks the host repo but does not
+# own the host's tree. Ignore everything at root except our own kit.
+/*
+!/survival/
+!/.gitignore
