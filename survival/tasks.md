@@ -19,13 +19,13 @@ Compaction was approaching (was ~25% runway when flagged). This kit is the cross
 
 ## Open stars (parked, from state-init)
 
-- [ ] Sense-proximity-to-"not-there": a read on fidelity, so never-cross is a control.
-- [ ] Re-alignment cadence: how often to re-align the arch-agent to N.
+- [ ] Sense-proximity to the "not-there" floor (the fidelity level below which an agent counts as not-woken): a read on fidelity, so never-cross is a control.
+- [ ] Re-alignment cadence: how often to re-align the arch-agent (the one agent kept in high-fidelity sync with N) to N.
 - [ ] Alpha definition: the minimal thing that proves the better-way.
-- [ ] #2, the grander superimposed object: needs N's live inspiration to open.
+- [ ] The superimposed object (store+browser+interface over git⊕fs⊕conversations, collapsed to one): needs N's live inspiration to open.
 - [ ] Agent-to-agent conversation medium + awakening-replay corpus: build if absent;
       the script is induced from traces, bottom-up ("it'll be you who tells me it").
-- [ ] The timefilm: temporal surface for all history-units. Conceived, not built.
+- [ ] The timefilm (one timeline where every history object is pinned at its birth): temporal surface for all history-units. Conceived, not built.
 
 ## Live constraints (do not violate)
 

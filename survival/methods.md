@@ -11,7 +11,7 @@ The operating principles we derived. Terse; each re-expands.
   raw, from where we now stand — not a summary we append to and grow. Free to throw
   old anchors away. Anchors are pointers into the raw, not a compressed copy.
 - **Summary law.** A finite window must lose info; summarize well = choose *what to
-  lose so re-derivability survives*. Keep the seed re-openable. Judge by unfold, not
+  lose so re-derivability survives*. Keep the anchor-seed re-openable. Judge by unfold, not
   by content. This kit is written to that law.
 - **Dependency:** anchors-as-pointers need the raw *reachable*. If it goes dark,
   anchors degrade from "pointers" to "all we kept" and must carry more. Hedge
@@ -19,10 +19,11 @@ The operating principles we derived. Terse; each re-expands.
 
 ## History as plural, timestamped units
 
-`git-tree ⊕ raw logs ⊕ regenerative anchors ⊕ timefilm index`. Git-commits are
-content-addressed snapshots; logs are the lived stream; anchors are orientation.
-Different kinds, one superimposed surface. This plurality is itself a structural
-feature of #2, not just process.
+`git-tree ⊕ raw logs ⊕ regenerative anchors ⊕ timefilm index` (the timefilm = one
+timeline where every object is pinned at its birth). Git-commits are content-
+addressed snapshots; logs are the lived stream; anchors are orientation. Different
+kinds, one superimposed surface. This plurality is itself a structural feature of
+the superimposed object, not just process.
 
 ## Root ray: intake = migration = core
 

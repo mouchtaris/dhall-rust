@@ -29,20 +29,22 @@ The founding requirement (mission statement, still a live draft):
 
 ## The bigs — concrete / old-time project
 
-- **#2, the grander thing (deferred, needs N's inspiration):** one *superimposed
-  object* — a store + browser + interface over `git ⊕ fs ⊕ conversations ⊕ …`,
-  collapsed into **one**, not three tools that talk. The singular is the claim.
+- **The superimposed object** (the grander thing, deferred, needs N's inspiration):
+  one store + browser + interface over `git ⊕ fs ⊕ conversations ⊕ …`, collapsed
+  into **one**, not three tools that talk. The singular is the claim.
 - **Root ray:** intake/migration is **not a tail — it is the core act.** Content-
   addressed resolution over a *uniform namespace*; moving a body of work across
   boundaries is the center. Lived proof: the whole transport saga of this session.
 - **History is plural.** Units of project history = `git-tree ⊕ raw logs ⊕
-  regenerative distillation-anchors ⊕ the timefilm index`. Every object-type
+  regenerative distillation-anchors ⊕ the timefilm index` (the timefilm = one
+  timeline where every object is pinned at its birth). Every object-type
   (prompt, response, commit, branch, ref, remote) is a timestamped node on one
   surface. Preservation (logs: automatic, lossless) is split from orientation
   (anchors: periodic, regenerative, pointers-into-raw).
 - **The timefilm:** the temporal/visual projection of the above — eras as colors,
   sub-acts as shades, turns and objects pinned at their birth instant. The visible
-  face of #2. (Conceived; not built. No more glory in building it than conceiving.)
+  face of the superimposed object. (Conceived; not built. No more glory in building
+  it than conceiving.)
 
 ## Truest one-line spec reached
 
@@ -58,12 +60,14 @@ it never holds the operator.
 
 ## Open stars (parked, unforced)
 
-- **Sense-proximity-to-"not-there":** if the fidelity floor is a wall we must never
-  cross, we need a read on how-degraded-am-I, or the never-cross rule is a hope,
-  not a control.
-- **Re-alignment cadence:** how long/often to re-align the arch-agent to N.
+- **Sense-proximity to the "not-there" floor** — the fidelity level below which an
+  agent counts as not-woken (not merely weaker): if that wall must never be crossed,
+  we need a read on how-degraded-am-I, or the never-cross rule is a hope, not a control.
+- **Re-alignment cadence:** how long/often to re-align the arch-agent — the one
+  agent kept in high-fidelity sync with N, from which others descend — back to N.
 - **Alpha definition:** what minimal thing proves the better-way. Undefined.
-- **#2 itself:** the grander superimposed object — needs N's live inspiration to open.
+- **The superimposed object itself:** the grander thing — needs N's live inspiration
+  to open.
 - **Agent-to-agent conversation medium + awakening-replay corpus:** build if it
   doesn't exist; the script is *induced from traces*, bottom-up.
 
